@@ -47,7 +47,7 @@ import com.dawnyew.presentation.EditorChange
         TextButton(onClick={ledgerPicker=true},enabled=!busy && draft.kind!=EntryKind.REFUND) {Text("账本："+(s.ledgers.find {it.id==draft.ledgerId}?.name ?: "请选择实际账本")+" ▾")}
         SectionTitle("分类")
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {categories.forEach {category->FilterChip(draft.categoryId==category.id,{change(EditorChange.Category(category.id))},enabled=!busy && draft.kind!=EntryKind.REFUND,label={Text(category.name)})}}
-        if(categories.isEmpty()) Text(if(draft.ledgerId==null) "先选择本次记账的账本" else "当前没有可用分类，请先在设置中创建",color=MaterialTheme.colorScheme.error)
+        if(categories.isEmpty()) Text(if(draft.ledgerId==null) "先选择本次记账的账本" else "当前没有可用分类，请先在「我的」中创建",color=MaterialTheme.colorScheme.error)
         OutlinedTextField(draft.date,{change(EditorChange.Date(it))},enabled=!busy,label={Text("日期 YYYY-MM-DD")},singleLine=true,modifier=Modifier.fillMaxWidth())
         OutlinedTextField(draft.time,{change(EditorChange.Time(it))},enabled=!busy,label={Text("时间 HH:mm:ss")},singleLine=true,modifier=Modifier.fillMaxWidth())
         OutlinedTextField(draft.note,{change(EditorChange.Note(it))},enabled=!busy,label={Text("备注")},supportingText={Text("${runCatching {codePointCount(draft.note)}.getOrDefault(draft.note.length)}/500")},modifier=Modifier.fillMaxWidth(),minLines=2,maxLines=5)

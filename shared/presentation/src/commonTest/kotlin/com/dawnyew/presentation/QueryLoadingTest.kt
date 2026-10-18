@@ -71,6 +71,124 @@ class QueryLoadingTest {
         override suspend fun close()=Unit
     }
 
+    @Test fun homeKeepsPeriodTrendAndTodaysGrossAmountsIndependentOfSearchAndStatistics()=runTest {
+        val income=entry.copy(id="income",kind=EntryKind.INCOME,amountMinor=8000)
+        val refund=entry.copy(id="refund",kind=EntryKind.REFUND,amountMinor=200,parentExpenseId=entry.id)
+        val historic=entry.copy(id="historic",amountMinor=4567,occurrence="2026-09-15T12:00:00")
+        val repo=Repository(data.copy(entries=listOf(entry,income,refund,historic)))
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        controller.loadStatistics(october.copy(kinds=setOf(EntryKind.INCOME)));runCurrent()
+        val selected=QueryScope(setOf("ledger"),"2026-09-01","2026-09-30",setOf(EntryKind.REFUND),setOf("missing"),"hidden",false)
+        controller.loadHome(selected,"2026-10-18");runCurrent()
+        val period=controller.homeStatistics.value.snapshot!!
+        val today=controller.todayStatistics.value.snapshot!!
+        assertEquals(homeStatisticsScope(selected),period.scope)
+        assertEquals(4567L,period.netExpense)
+        assertEquals("2026-09-15",period.trend.single {it.netExpense!=0L}.period)
+        assertEquals(8000L,today.income)
+        assertEquals(1234L,today.expense)
+        assertEquals(200L,today.refunds)
+        assertEquals(1034L,today.netExpense)
+        assertEquals(todayStatisticsScope(selected,"2026-10-18"),today.scope)
+        assertEquals(setOf(EntryKind.INCOME),controller.statistics.value.snapshot!!.scope.kinds)
+        assertEquals(8000L,controller.statistics.value.snapshot!!.income)
+    }
+
+    @Test fun changingHomePeriodReusesTodayUntilTheLedgerOrLocalDateChanges()=runTest {
+        val repo=Repository(data)
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        controller.loadHome(october,"2026-10-18");runCurrent()
+        controller.loadHome(november,"2026-10-18");runCurrent()
+        assertEquals(3,repo.statisticsCalls.size)
+        assertEquals(november,controller.homeStatistics.value.snapshot!!.scope)
+        assertEquals("2026-10-18",controller.todayStatistics.value.snapshot!!.scope.startDate)
+        controller.loadHome(november,"2026-10-19");runCurrent()
+        assertEquals(4,repo.statisticsCalls.size)
+        assertEquals("2026-10-19",controller.todayStatistics.value.snapshot!!.scope.startDate)
+        controller.loadHome(november.copy(ledgerIds=setOf("ledger")),"2026-10-19");runCurrent()
+        assertEquals(6,repo.statisticsCalls.size)
+        assertEquals(setOf("ledger"),controller.todayStatistics.value.snapshot!!.scope.ledgerIds)
+    }
+
+    @Test fun externalReturnRetriesBothHomeQueriesAfterAuthorizationFailure()=runTest {
+        val repo=Repository(data)
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        controller.navigate {it.copy(homeScope=november)}
+        repo.statisticsLocked=true
+        controller.loadHome(november,"2026-10-18");runCurrent()
+        assertNotNull(controller.homeStatistics.value.error)
+        assertNotNull(controller.todayStatistics.value.error)
+        repo.statisticsLocked=false
+        controller.resumeVisibleQueries();runCurrent()
+        assertEquals(4,repo.statisticsCalls.size)
+        assertNull(controller.homeStatistics.value.error)
+        assertNull(controller.todayStatistics.value.error)
+        assertEquals(november,controller.homeStatistics.value.snapshot!!.scope)
+        assertEquals("2026-10-18",controller.todayStatistics.value.snapshot!!.scope.startDate)
+        assertNull(controller.statistics.value.snapshot)
+    }
+
+    @Test fun externalReturnRetriesOnlyFailedHomePeriodAndKeepsSuccessfulTodayCached()=runTest {
+        val repo=Repository(data)
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        controller.loadHome(october,"2026-10-18");runCurrent()
+        controller.navigate {it.copy(homeScope=november)}
+        repo.statisticsFailure=true
+        controller.loadHome(november,"2026-10-18");runCurrent()
+        assertNotNull(controller.homeStatistics.value.error)
+        assertNull(controller.todayStatistics.value.error)
+        repo.statisticsFailure=false
+        controller.resumeVisibleQueries();runCurrent()
+        assertEquals(4,repo.statisticsCalls.size)
+        assertNull(controller.homeStatistics.value.error)
+        assertEquals(november,controller.homeStatistics.value.snapshot!!.scope)
+        assertEquals(1234L,controller.todayStatistics.value.snapshot!!.expense)
+        controller.resumeVisibleQueries();runCurrent()
+        assertEquals(4,repo.statisticsCalls.size)
+    }
+
+    @Test fun externalReturnReplacesBothPendingHomeReadsAndIgnoresLateAuthorizationErrors()=runTest {
+        val repo=Repository(data)
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        controller.navigate {it.copy(homeScope=november)}
+        repo.ignoreCancellation=true;repo.statisticsLocked=true;repo.statisticsGate=CompletableDeferred()
+        val oldGate=repo.statisticsGate!!
+        controller.loadHome(november,"2026-10-18");runCurrent()
+        assertTrue(controller.homeStatistics.value.loading)
+        assertTrue(controller.todayStatistics.value.loading)
+        repo.statisticsLocked=false;repo.statisticsGate=null
+        controller.resumeVisibleQueries();runCurrent()
+        assertFalse(controller.homeStatistics.value.loading)
+        assertFalse(controller.todayStatistics.value.loading)
+        oldGate.complete(Unit);runCurrent()
+        assertNull(controller.homeStatistics.value.error)
+        assertNull(controller.todayStatistics.value.error)
+        assertEquals(november,controller.homeStatistics.value.snapshot!!.scope)
+        assertEquals(1234L,controller.todayStatistics.value.snapshot!!.expense)
+        assertEquals(4,repo.statisticsCalls.size)
+    }
+
+    @Test fun replacingResettingOrClosingTheDatasetClearsBothHomeResultsAndCaches()=runTest {
+        val repo=Repository(data)
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        controller.loadHome(october,"2026-10-18");runCurrent()
+        repo.state.value=data.copy(datasetId="replacement",entries=emptyList());runCurrent()
+        assertNull(controller.homeStatistics.value.snapshot)
+        assertNull(controller.todayStatistics.value.snapshot)
+        controller.loadHome(october,"2026-10-18");runCurrent()
+        assertEquals("replacement",controller.homeStatistics.value.snapshot!!.datasetId)
+        assertEquals(0L,controller.todayStatistics.value.snapshot!!.expense)
+        controller.resetTransientState()
+        assertNull(controller.homeStatistics.value.snapshot)
+        assertNull(controller.todayStatistics.value.snapshot)
+        assertEquals("首页",controller.navigation.value.page)
+        controller.loadHome(october,"2026-10-18");runCurrent()
+        assertEquals(6,repo.statisticsCalls.size)
+        repo.state.value=null;runCurrent()
+        assertNull(controller.homeStatistics.value.snapshot)
+        assertNull(controller.todayStatistics.value.snapshot)
+    }
+
     @Test fun changingPeriodKeepsCompletedRowsUntilReplacementIsReady()=runTest {
         val repo=Repository(data)
         val controller=AppController(repo,Environment(),backgroundScope)

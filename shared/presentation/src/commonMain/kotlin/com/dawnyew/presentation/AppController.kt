@@ -28,12 +28,24 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     val entries: StateFlow<EntryPageUi> = paging.state
     private val statisticsCoordinator=StatisticsCoordinator(repository,scope)
     val statistics:StateFlow<StatisticsPageUi> = statisticsCoordinator.state
+    private val homeStatisticsCoordinator=StatisticsCoordinator(repository,scope)
+    val homeStatistics:StateFlow<StatisticsPageUi> = homeStatisticsCoordinator.state
+    private val todayStatisticsCoordinator=StatisticsCoordinator(repository,scope)
+    val todayStatistics:StateFlow<StatisticsPageUi> = todayStatisticsCoordinator.state
     fun loadStatistics(query:QueryScope,force:Boolean=false)=statisticsCoordinator.load(query,force)
+    fun loadHome(query:QueryScope,today:String,force:Boolean=false) {
+        homeStatisticsCoordinator.load(homeStatisticsScope(query),force)
+        todayStatisticsCoordinator.load(todayStatisticsScope(query,today),force)
+    }
     fun loadEntries(query: QueryScope, append: Boolean = false, force: Boolean = false) = paging.load(query, append, force)
     /** Called after external-result authorization is restored; supersede reads holding the old authorization. */
     fun resumeVisibleQueries() {
         val navigation=mutableNavigation.value
         when(navigation.page) {
+            "首页" -> {
+                homeStatisticsCoordinator.load(homeStatisticsScope(navigation.homeScope),force=homeStatistics.value.loading || homeStatistics.value.error!=null)
+                todayStatisticsCoordinator.load(todayStatisticsScope(navigation.homeScope,environment.localNow().take(10)),force=todayStatistics.value.loading || todayStatistics.value.error!=null)
+            }
             "明细" -> paging.load(navigation.scope,force=entries.value.loading || entries.value.error!=null)
             "统计" -> statisticsCoordinator.load(navigation.scope,force=statistics.value.loading || statistics.value.error!=null)
         }
@@ -50,7 +62,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     val editor: StateFlow<EditorDraft?> = mutableEditor.asStateFlow()
     private val initialRange = monthRange(environment.localNow().take(7))
     private val initialScope = QueryScope(startDate = initialRange.first, endDate = initialRange.second)
-    private val mutableNavigation = MutableStateFlow(UiNavigation(detailsScope = initialScope, statisticsScope = initialScope))
+    private val mutableNavigation = MutableStateFlow(UiNavigation(detailsScope = initialScope, statisticsScope = initialScope, homeScope = initialScope))
     val navigation: StateFlow<UiNavigation> = mutableNavigation.asStateFlow()
     private var navigationDatasetId:String?=null
     private val queuedPreferences=linkedMapOf<String,String>()
@@ -64,7 +76,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
         val period=data.preferences.firstOrNull {it.key=="lastPeriod"}?.value
         val range=period?.let {runCatching {monthRange(it)}.getOrNull()} ?: monthRange(environment.localNow().take(7))
         val query=QueryScope(ledgerIds=ledger?.let {setOf(it.id)} ?: emptySet(),startDate=range.first,endDate=range.second)
-        mutableNavigation.value=UiNavigation(detailsScope=query,statisticsScope=query)
+        mutableNavigation.value=UiNavigation(detailsScope=query,statisticsScope=query,homeScope=query)
     }
     /** Only explicit selector actions persist preferences; statistics drills and queries do not. */
     fun selectScope(value:QueryScope) {
@@ -179,15 +191,20 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
         }
     }
     fun clearEditor() {duplicateJob?.cancel();mutableEditor.value=null}
-    fun resetTransientState() {
-        clearEditor()
+    private fun clearQueries() {
         paging.clear()
         statisticsCoordinator.clear()
+        homeStatisticsCoordinator.clear()
+        todayStatisticsCoordinator.clear()
+    }
+    fun resetTransientState() {
+        clearEditor()
+        clearQueries()
         clearQueuedPreferences()
         navigationDatasetId=null
         val data=repository.state.value
         if(data!=null) restoreNavigationPreferences(data)
-        else mutableNavigation.value = UiNavigation(detailsScope = initialScope, statisticsScope = initialScope)
+        else mutableNavigation.value = UiNavigation(detailsScope = initialScope, statisticsScope = initialScope, homeScope = initialScope)
     }
     fun saveEditor(keep: Boolean, onSuccess: () -> Unit) {
         val current = mutableEditor.value ?: return
@@ -203,7 +220,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     }
     init {
         scope.launch { repository.state.collect { data ->
-            if(data==null || mutable.value.dataset?.datasetId?.let {it!=data.datasetId}==true) {paging.clear();statisticsCoordinator.clear()}
+            if(data==null || mutable.value.dataset?.datasetId?.let {it!=data.datasetId}==true) clearQueries()
             mutable.update { it.copy(dataset=data) }
             if(data!=null && navigationDatasetId!=data.datasetId) {clearQueuedPreferences();restoreNavigationPreferences(data)}
         } }
@@ -220,7 +237,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
                 mutablePendingOperation.update {if(it?.operationId==operationId) null else it}
                 if(recovery.outcome!=null && mutableEditor.value?.operationId==operationId) {
                     clearEditor()
-                    mutableNavigation.update {it.copy(page="明细",tab="明细")}
+                    mutableNavigation.update {it.copy(page="首页",tab="首页")}
                 }
             } catch(cancelled:CancellationException) {throw cancelled}
             catch(_:Exception) {notify("确认结果未能保存，请重试；上次操作状态仍保留")}

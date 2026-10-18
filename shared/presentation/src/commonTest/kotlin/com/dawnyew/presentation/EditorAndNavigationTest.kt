@@ -9,6 +9,55 @@ class EditorAndNavigationTest {
         categories = listOf(Category("c1", "l1", Direction.EXPENSE, "餐饮", sortOrder = 0)),
     )
 
+    @Test fun navigationStartsAtHomeAndReturnsNewEditorsThere() {
+        val query=QueryScope(startDate="2026-10-01",endDate="2026-10-31")
+        val navigation=UiNavigation(detailsScope=query,statisticsScope=query)
+        assertEquals("首页",navigation.page)
+        assertEquals("首页",navigation.tab)
+        assertEquals("首页",navigation.editorReturnPage)
+    }
+
+    @Test fun homeDetailsAndStatisticsKeepIndependentSelectors() {
+        val home=QueryScope(setOf("home"),"2026-10-01","2026-10-31")
+        val details=home.copy(ledgerIds=setOf("details"),keyword="午餐")
+        val statistics=home.copy(ledgerIds=setOf("statistics"),startDate="2026-01-01")
+        val navigation=UiNavigation(homeScope=home,detailsScope=details,statisticsScope=statistics)
+        for(page in listOf("首页","更多","我的","账本","设置")) {
+            val visible=navigation.copy(page=page)
+            assertEquals(home,visible.scope)
+            val changed=visible.withScope(home.copy(endDate="2026-10-20"))
+            assertEquals("2026-10-20",changed.homeScope.endDate)
+            assertEquals(details,changed.detailsScope)
+            assertEquals(statistics,changed.statisticsScope)
+        }
+        assertEquals(details,navigation.copy(page="明细").scope)
+        assertEquals(statistics,navigation.copy(page="统计").scope)
+        assertEquals(home,navigation.copy(page="明细").withScope(details.copy(keyword="早餐")).homeScope)
+        assertEquals(home,navigation.copy(page="统计").withScope(statistics.copy(keyword="交通")).homeScope)
+    }
+
+    @Test fun detailAndEditorKeepTheirSourceScopeWhenTheSelectedTabDiffers() {
+        val home=QueryScope(keyword="home")
+        val details=QueryScope(keyword="details")
+        val statistics=QueryScope(keyword="statistics")
+        val navigation=UiNavigation(homeScope=home,detailsScope=details,statisticsScope=statistics,tab="统计")
+        assertEquals(details,navigation.copy(page="账单详情").scope)
+        for(returnPage in listOf("明细","账单详情")) {
+            assertEquals(details,navigation.copy(page="记一笔",editorReturnPage=returnPage).scope)
+        }
+        assertEquals(statistics,navigation.copy(page="记一笔",editorReturnPage="统计").scope)
+        assertEquals(home,navigation.copy(page="记一笔",editorReturnPage="首页").scope)
+    }
+
+    @Test fun homeQueriesKeepLedgerPeriodAndArchiveChoiceWithoutEntrySearchFilters() {
+        val selected=QueryScope(setOf("l1"),"2026-09-01","2026-09-30",setOf(EntryKind.REFUND),setOf("c1"),"午餐",false)
+        val period=homeStatisticsScope(selected)
+        assertEquals(QueryScope(setOf("l1"),"2026-09-01","2026-09-30",includeArchived=false),period)
+        assertEquals(period.copy(startDate="2026-10-18",endDate="2026-10-18"),todayStatisticsScope(selected,"2026-10-18"))
+        assertEquals(setOf(EntryKind.REFUND),selected.kinds)
+        assertEquals("午餐",selected.keyword)
+    }
+
     @Test fun newCaptureResetsFieldsAndConfirmationWithNewOperationId() {
         val first = EditorDraft.create(state, "first", "2026-10-18T12:00:00", "l1", capture = CaptureDraftUi("12.34", note = "甲"))
         val second = EditorDraft.create(state, "second", "2026-10-18T12:00:00", "l1", capture = CaptureDraftUi("56.78", note = "乙"))

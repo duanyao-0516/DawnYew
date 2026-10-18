@@ -56,12 +56,28 @@ fun statisticsView(state: LedgerState?, scope: QueryScope): StatisticsView = if 
 } catch (e: DomainException) { StatisticsView.Error(e.message) }
 catch (_: Exception) { StatisticsView.Error("统计未完成，请重试或调整筛选") }
 
+/** The home dashboard summarizes the selected ledger and period, independently of entry searches. */
+fun homeStatisticsScope(query:QueryScope):QueryScope = query.copy(kinds=emptySet(),categoryIds=emptySet(),keyword="")
+
+/** Today follows the same ledgers as the dashboard, even when its selected period is historical. */
+fun todayStatisticsScope(query:QueryScope,today:String):QueryScope = homeStatisticsScope(query).copy(startDate=today,endDate=today)
+
 /** UI context remains in process memory, including potentially sensitive filter keywords. */
 data class UiNavigation(
-    val page: String = "明细", val tab: String = "明细", val selectedEntryId: String? = null,
+    val page: String = "首页", val tab: String = "首页", val selectedEntryId: String? = null,
     val detailsScope: QueryScope, val statisticsScope: QueryScope,
-    val drillReturnScope: QueryScope? = null, val editorReturnPage: String = "明细",
+    val drillReturnScope: QueryScope? = null, val editorReturnPage: String = "首页",
+    val homeScope: QueryScope = detailsScope,
 ) {
-    val scope get() = if (page == "统计") statisticsScope else detailsScope
-    fun withScope(value: QueryScope) = if (page == "统计") copy(statisticsScope = value) else copy(detailsScope = value)
+    private val scopePage get() = if(page=="记一笔") editorReturnPage else page
+    val scope get() = when(scopePage) {
+        "统计" -> statisticsScope
+        "明细","账单详情" -> detailsScope
+        else -> homeScope
+    }
+    fun withScope(value: QueryScope) = when(scopePage) {
+        "统计" -> copy(statisticsScope=value)
+        "明细","账单详情" -> copy(detailsScope=value)
+        else -> copy(homeScope=value)
+    }
 }

@@ -3,12 +3,17 @@ package com.dawnyew.ui
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -17,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dawnyew.core.*
 import com.dawnyew.presentation.*
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun DawnYewApp(controller:AppController,actions:PlatformActions,lockEnabled:Boolean,captureDraft:CaptureDraftUi?=null,onBackHandlerChanged:((()->Unit)?)->Unit={},onCaptureConsumed:()->Unit={}) {
@@ -25,6 +31,8 @@ import com.dawnyew.presentation.*
     val pendingOperation by controller.pendingOperation.collectAsState()
     val entryPage by controller.entries.collectAsState()
     val statisticsPage by controller.statistics.collectAsState()
+    val homePeriod by controller.homeStatistics.collectAsState()
+    val homeToday by controller.todayStatistics.collectAsState()
     val navigation by controller.navigation.collectAsState()
     val s=ui.dataset
     val page=navigation.page
@@ -33,6 +41,11 @@ import com.dawnyew.presentation.*
     val selectedLedger=scope.ledgerIds.singleOrNull()
     val start=scope.startDate
     val end=scope.endDate
+    val homeScroll=rememberLazyListState()
+    var todayDate by remember {mutableStateOf(controller.environment.localNow().take(10))}
+    LaunchedEffect(Unit) {
+        while(true) {todayDate=controller.environment.localNow().take(10);delay(30_000)}
+    }
     val detailsScroll=rememberLazyListState()
     val statisticsScroll=rememberLazyListState()
     val theme=s?.preferences?.find {it.key=="theme"}?.value ?: "system"
@@ -41,14 +54,16 @@ import com.dawnyew.presentation.*
         LaunchedEffect(ui.message) {ui.message?.let {snack.showSnackbar(it);controller.clearMessage()}}
         var ledgerPicker by remember {mutableStateOf(false)}
         var filters by remember {mutableStateOf(false)}
+        var searchFromHome by remember {mutableStateOf(false)}
         var confirm by remember {mutableStateOf<Confirmation?>(null)}
-        val primary=page in listOf("明细","统计","设置")
+        val primary=page in listOf("首页","统计","更多","我的")
         val drillActive=page=="明细" && navigation.drillReturnScope!=null
         fun navigatePage(destination:String) {controller.navigate {it.copy(page=destination)}}
         fun finishBack() {
             when {
                 page=="记一笔" -> {controller.clearEditor();controller.navigate {it.copy(page=it.editorReturnPage)}}
                 drillActive -> controller.navigate {it.copy(page="统计",tab="统计",detailsScope=it.drillReturnScope ?: it.detailsScope,drillReturnScope=null)}
+                page=="账单详情" -> navigatePage("明细")
                 else -> navigatePage(tab)
             }
         }
@@ -64,49 +79,74 @@ import com.dawnyew.presentation.*
             if(captureDraft!=null && s!=null) {controller.beginEditor(selectedLedger,capture=captureDraft);onCaptureConsumed()}
         }
         LaunchedEffect(page,editor) {
-            if(page=="记一笔" && editor==null) {controller.navigate {it.copy(page="明细",tab="明细")};controller.notify("未保存草稿已清除，请重新录入")}
+            if(page=="记一笔" && editor==null) {controller.navigate {it.copy(page="首页",tab="首页")};controller.notify("未保存草稿已清除，请重新录入")}
         }
         LaunchedEffect(page,scope,s?.datasetId,s?.contentVersion) {if(page=="明细" && s!=null) controller.loadEntries(scope)}
         LaunchedEffect(page,scope,s?.datasetId,s?.contentVersion) {if(page=="统计" && s!=null) controller.loadStatistics(scope)}
+        LaunchedEffect(page,scope,todayDate,s?.datasetId,s?.contentVersion) {if(page=="首页" && s!=null) controller.loadHome(scope,todayDate)}
         val stats=statisticsPage.snapshot
         fun setScope(value:QueryScope) {controller.selectScope(value)}
         fun setRange(value:DateRange) {setScope(scope.copy(startDate=value.startDate,endDate=value.endDate))}
+        fun openHomeDetails(value:QueryScope=homeStatisticsScope(navigation.homeScope)) {
+            controller.navigate {it.copy(page="明细",tab="首页",detailsScope=value,drillReturnScope=null)}
+        }
         Scaffold(
-            topBar={TopAppBar(title={Column {
-                Text(page,fontWeight=FontWeight.SemiBold)
-                if(primary && page!="设置") TextButton(onClick={ledgerPicker=true},contentPadding=PaddingValues(0.dp)) {Text((s?.ledgers?.find {it.id==selectedLedger}?.name ?: "全部账本")+" ▾")}
-            }},navigationIcon={if(!primary || drillActive) TextButton(onClick={requestBack()}) {Text("返回")}},actions={if(primary && page!="设置") TextButton(onClick={filters=true}) {Text("筛选")}})},
-            bottomBar={if(primary && !drillActive) NavigationBar {listOf("明细" to "≡","统计" to "▥","设置" to "⚙").forEach {(title,icon)->NavigationBarItem(selected=page==title,onClick={controller.navigate {it.copy(page=title,tab=title)}},icon={Text(icon,fontSize=22.sp)},label={Text(title)})}}},
-            floatingActionButton={if(page=="明细") ExtendedFloatingActionButton(onClick={controller.beginEditor(selectedLedger)},text={Text("记一笔")},icon={Text("＋",fontSize=24.sp)})},
+            topBar={TopAppBar(title={
+                if(page=="首页") TextButton(onClick={ledgerPicker=true},contentPadding=PaddingValues(horizontal=0.dp)) {
+                    Text((s?.ledgers?.find {it.id==selectedLedger}?.name ?: "全部账本")+" ▾",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold)
+                } else Column {
+                    Text(page,fontWeight=FontWeight.SemiBold)
+                    if(page in listOf("统计","明细")) TextButton(onClick={ledgerPicker=true},contentPadding=PaddingValues(0.dp)) {Text((s?.ledgers?.find {it.id==selectedLedger}?.name ?: "全部账本")+" ▾")}
+                }
+            },navigationIcon={if(!primary) TextButton(onClick={requestBack()}) {Text("返回")}},actions={
+                if(page=="首页") IconButton(onClick={searchFromHome=true;filters=true},modifier=Modifier.semantics {contentDescription="搜索账单"}) {AppGlyph("搜索")}
+                else if(page in listOf("统计","明细")) TextButton(onClick={searchFromHome=false;filters=true}) {Text("筛选")}
+            })},
+            bottomBar={if(primary) NavigationBar {listOf("首页","统计","更多","我的").forEach {title->
+                NavigationBarItem(selected=page==title,onClick={controller.navigate {it.copy(page=title,tab=title)}},icon={AppGlyph(title)},label={Text(title)})
+            }}},
+            floatingActionButton={if(page in listOf("首页","明细")) FloatingActionButton(
+                onClick={controller.beginEditor(selectedLedger)},shape=CircleShape,modifier=Modifier.size(64.dp).semantics {contentDescription="记一笔"},
+            ) {AppGlyph("新增")}},
             snackbarHost={SnackbarHost(snack)},
         ) {padding->
             if(s==null) Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.Center) {CircularProgressIndicator()}
             else Box(Modifier.fillMaxSize().padding(padding)) {
                 when(page) {
-                    "明细" -> DetailsPage(s,entryPage,scope,controller.environment.localNow().take(10),detailsScroll,
+                    "首页" -> HomePage(homePeriod,homeToday,scope,todayDate,homeScroll,onRange=::setRange,
+                        onRetryPeriod={controller.loadHome(scope,todayDate,force=true)},onRetryToday={controller.loadHome(scope,todayDate,force=true)},
+                        onDetails={openHomeDetails()},onPeriodDrill={period->
+                            val source=homePeriod.snapshot?.scope
+                            if(source!=null && source==homeStatisticsScope(scope) && !homePeriod.loading && homePeriod.error==null) openHomeDetails(drillScope(source,period=period))
+                        },onTodayDrill={kind->
+                            val source=homeToday.snapshot?.scope
+                            if(source!=null && source==todayStatisticsScope(scope,todayDate) && !homeToday.loading && homeToday.error==null) openHomeDetails(source.copy(kinds=setOf(kind)))
+                        })
+                    "更多" -> Box(Modifier.fillMaxSize())
+                    "明细" -> DetailsPage(s,entryPage,scope,todayDate,detailsScroll,
                         onRange=::setRange,onMore={controller.loadEntries(scope,append=true)},onRetry={controller.loadEntries(scope,force=true)},
                         onOpen={entry->controller.navigate {it.copy(selectedEntryId=entry.id,page="账单详情")}},onCapture=actions::chooseScreenshot,
                         onClearFilter={setScope(scope.copy(keyword="",kinds=emptySet(),categoryIds=emptySet()))})
                     "统计" -> Column(Modifier.fillMaxSize()) {
-                        DateRangeSelector(start,end,controller.environment.localNow().take(10),::setRange)
+                        DateRangeSelector(start,end,todayDate,::setRange)
                         QueryStatus(statisticsPage.loading,stats?.scope,scope,statisticsPage.error) {controller.loadStatistics(scope,force=true)}
                         if(stats!=null) {
                             val interactive=!statisticsPage.loading && statisticsPage.error==null && stats.scope==scope && statisticsPage.scope==scope
-                            StatisticsPage(s,stats,controller.environment.localNow().take(10),stats.scope.ledgerIds.singleOrNull(),stats.scope.startDate,stats.scope.endDate,
+                            StatisticsPage(s,stats,todayDate,stats.scope.ledgerIds.singleOrNull(),stats.scope.startDate,stats.scope.endDate,
                                 ui.busy || !interactive,statisticsScroll,interactive=interactive,
                                 onBudget={amount,done->if(interactive) stats.scope.ledgerIds.singleOrNull()?.let {controller.perform(Command.SetBudget(it,stats.scope.startDate.take(7),amount)) {done()}}},
                                 onDrill={category,date,ledger->if(interactive) {
                                     val narrowed=drillScope(stats.scope,category,date,ledger)
-                                    controller.navigate {it.copy(page="明细",tab="明细",detailsScope=narrowed,drillReturnScope=it.detailsScope)}
+                                    controller.navigate {it.copy(page="明细",tab="统计",detailsScope=narrowed,drillReturnScope=it.detailsScope)}
                                 }},onRefundDrill={category->if(interactive) {
                                     val narrowed=drillScope(stats.scope,categoryId=category,categoryKind=EntryKind.REFUND)
-                                    controller.navigate {it.copy(page="明细",tab="明细",detailsScope=narrowed,drillReturnScope=it.detailsScope)}
+                                    controller.navigate {it.copy(page="明细",tab="统计",detailsScope=narrowed,drillReturnScope=it.detailsScope)}
                                 }})
                         }
                     }
-                    "设置" -> SettingsPage(s,actions,lockEnabled,onNavigate=::navigatePage,onTheme={controller.perform(Command.SetPreference("theme",it))},onConfirm={confirm=it})
+                    "我的" -> MyPage(s,actions,lockEnabled,onNavigate=::navigatePage,onDetails={controller.navigate {it.copy(page="明细",detailsScope=homeStatisticsScope(it.homeScope),drillReturnScope=null)}},onTheme={controller.perform(Command.SetPreference("theme",it))},onConfirm={confirm=it})
                     "记一笔" -> editor?.let {draft->key(draft.operationId) {EntryForm(s,draft,ui.busy,onChange={value->controller.changeEditor(draft.operationId,value)},onSave={keep->controller.saveEditor(keep) {if(keep) controller.notify("已保存，可以继续记账") else controller.navigate {it.copy(page=it.editorReturnPage)}}},onCapture=actions::chooseScreenshot,onRetryDuplicateCheck=controller::retryCaptureDuplicateCheck)}}
-                    "账单详情" -> s.entries.find {it.id==navigation.selectedEntryId}?.let {entry->EntryDetail(s,entry,ui.busy,onEdit={controller.beginEditor(entry.ledgerId,editId=entry.id)},onRefund={controller.beginEditor(entry.ledgerId,refundParentId=entry.id)},onDelete={confirm=Confirmation("移入回收站？","原支出及当前有效退款会一起移入回收站，可在设置中恢复。") {controller.perform(Command.SoftDelete(entry.id)) {navigatePage(tab)}}},onMove={ledger,category->controller.perform(Command.MoveEntry(entry.id,ledger,category))})} ?: EmptyState("这笔账单已不存在","请返回明细查看最新数据")
+                    "账单详情" -> s.entries.find {it.id==navigation.selectedEntryId}?.let {entry->EntryDetail(s,entry,ui.busy,onEdit={controller.beginEditor(entry.ledgerId,editId=entry.id)},onRefund={controller.beginEditor(entry.ledgerId,refundParentId=entry.id)},onDelete={confirm=Confirmation("移入回收站？","原支出及当前有效退款会一起移入回收站，可在「我的」的回收站中恢复。") {controller.perform(Command.SoftDelete(entry.id)) {navigatePage("明细")}}},onMove={ledger,category->controller.perform(Command.MoveEntry(entry.id,ledger,category))})} ?: EmptyState("这笔账单已不存在","请返回明细查看最新数据")
                     "账本管理" -> LedgerManagement(s,controller,onConfirm={confirm=it})
                     "分类管理" -> CategoryManagement(s,selectedLedger,controller,onConfirm={confirm=it})
                     "回收站" -> RecyclePage(s,controller,onConfirm={confirm=it})
@@ -116,14 +156,20 @@ import com.dawnyew.presentation.*
             }
         }
         if(ledgerPicker && s!=null) ChoiceDialog("选择账本",listOf(null to "全部账本（含归档）")+s.ledgers.sortedBy {it.sortOrder}.map {it.id to (it.name+if(it.archived) " · 已归档" else "")},selectedLedger,onSelect={id->setScope(scope.copy(ledgerIds=id?.let {setOf(it)} ?: emptySet(),categoryIds=emptySet()));ledgerPicker=false},onDismiss={ledgerPicker=false})
-        if(filters && s!=null) FilterDialog(s,selectedLedger,scope.keyword,scope.kinds.singleOrNull()?.name,scope.categoryIds.singleOrNull(),onDismiss={filters=false},onApply={keyword,kind,category->
-            setScope(scope.copy(keyword=keyword,kinds=kind?.let {setOf(EntryKind.valueOf(it))} ?: emptySet(),categoryIds=category?.let {setOf(it)} ?: emptySet()));filters=false
-        })
+        if(filters && s!=null) {
+            val filterScope=if(searchFromHome) homeStatisticsScope(navigation.homeScope) else scope
+            FilterDialog(s,filterScope.ledgerIds.singleOrNull(),filterScope.keyword,filterScope.kinds.singleOrNull()?.name,filterScope.categoryIds.singleOrNull(),
+                search=searchFromHome,onDismiss={filters=false},onApply={keyword,kind,category->
+                    val next=filterScope.copy(keyword=keyword,kinds=kind?.let {setOf(EntryKind.valueOf(it))} ?: emptySet(),categoryIds=category?.let {setOf(it)} ?: emptySet())
+                    if(searchFromHome) openHomeDetails(next) else setScope(next)
+                    filters=false
+                })
+        }
         confirm?.let {confirmation->AlertDialog(onDismissRequest={confirm=null},title={Text(confirmation.title)},text={Text(confirmation.message)},confirmButton={TextButton(onClick={confirm=null;confirmation.action()}) {Text("确认")}},dismissButton={TextButton(onClick={confirm=null}) {Text("取消")}})}
         pendingOperation?.let {recovery->
             AlertDialog(onDismissRequest={},title={Text(if(recovery.outcome!=null) "上次操作已提交" else "上次操作未确认提交")},text={
                 Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Text(if(recovery.outcome!=null) "本机已找到这次操作的提交记录，数据已经保存。请确认后查看明细或对应设置，不要重复录入。"
+                    Text(if(recovery.outcome!=null) "本机已找到这次操作的提交记录，数据已经保存。请确认后查看明细或「我的」中的对应功能，不要重复录入。"
                         else "本机未找到这次操作的提交记录。未保存的输入只保留在当前进程，请先核对明细，再决定是否重新操作。")
                     Text("此提示会保留到你确认；确认不会删除已经保存的数据。",style=MaterialTheme.typography.bodySmall)
                 }
@@ -160,7 +206,7 @@ internal data class Confirmation(val title:String,val message:String,val action:
                 if(scope.keyword.isNotEmpty() || scope.categoryIds.isNotEmpty() || scope.kinds.isNotEmpty()) TextButton(onClick=onClearFilter) {Text("清除筛选")}
             }}
             if(entries.loaded) item("count") {Text("已显示 ${entries.entries.size} 笔"+if(entries.nextCursor!=null) " · 还有更多" else "",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-            if(entries.loaded && entries.entries.isEmpty() && entries.error==null) item("empty") {EmptyState(if(entries.contentScope==scope) "当前范围没有账单" else "上次筛选结果暂无账单","可以调整日期或筛选，也可以点击「记一笔」开始")}
+            if(entries.loaded && entries.entries.isEmpty() && entries.error==null) item("empty") {EmptyState(if(entries.contentScope==scope) "当前范围没有账单" else "上次筛选结果暂无账单","可以调整日期或筛选，也可以点击右下角加号开始")}
             items(entries.entries,key={it.id}) {entry->EntryRow(s,entry,enabled=interactive) {onOpen(entry)}}
             if(entries.nextCursor!=null && !entries.loading) item("more") {TextButton(onClick=onMore,enabled=interactive,modifier=Modifier.fillMaxWidth()) {Text("加载下一页")}}
         }
@@ -176,19 +222,24 @@ internal data class Confirmation(val title:String,val message:String,val action:
 @Composable internal fun <T> ChoiceDialog(title:String,options:List<Pair<T,String>>,selected:T,onSelect:(T)->Unit,onDismiss:()->Unit) {
     AlertDialog(onDismissRequest=onDismiss,title={Text(title)},text={LazyColumn {items(options.size) {i->val (value,label)=options[i];Row(Modifier.fillMaxWidth().clickable {onSelect(value)}.padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {RadioButton(selected==value,onClick={onSelect(value)});Text(label,Modifier.weight(1f))}}}},confirmButton={TextButton(onClick=onDismiss) {Text("关闭")}})
 }
-@Composable private fun FilterDialog(s:LedgerState,ledgerId:String?,initialKeyword:String,initialKind:String?,initialCategory:String?,onDismiss:()->Unit,onApply:(String,String?,String?)->Unit) {
+@Composable private fun FilterDialog(s:LedgerState,ledgerId:String?,initialKeyword:String,initialKind:String?,initialCategory:String?,search:Boolean=false,onDismiss:()->Unit,onApply:(String,String?,String?)->Unit) {
     var keyword by remember {mutableStateOf(initialKeyword)};var kind by remember {mutableStateOf(initialKind)};var category by remember {mutableStateOf(initialCategory)};var cat by remember {mutableStateOf(false)}
-    AlertDialog(onDismissRequest=onDismiss,title={Text("筛选账单")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(keyword,{keyword=it},label={Text("搜索备注")},singleLine=true)
+    val focus=remember {FocusRequester()}
+    AlertDialog(onDismissRequest=onDismiss,title={Text(if(search) "搜索账单" else "筛选账单")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(keyword,{keyword=it},modifier=Modifier.focusRequester(focus),label={Text("搜索备注")},singleLine=true)
+        LaunchedEffect(search) {if(search) focus.requestFocus()}
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {listOf(null to "全部","EXPENSE" to "支出","INCOME" to "收入","REFUND" to "退款").forEach {(k,n)->FilterChip(kind==k,{kind=k},label={Text(n)})}}
         TextButton(onClick={cat=true}) {Text("分类："+(s.categories.find {it.id==category}?.name ?: "全部"))}
     }},confirmButton={TextButton(onClick={onApply(keyword,kind,category)}) {Text("应用")}},dismissButton={TextButton(onClick=onDismiss) {Text("取消")}})
     if(cat) ChoiceDialog("筛选分类",listOf(null to "全部分类")+s.categories.filter {ledgerId==null || it.ledgerId==ledgerId}.map {it.id to it.name},category,{category=it;cat=false},{cat=false})
 }
 
-@Composable private fun SettingsPage(s:LedgerState,actions:PlatformActions,lockEnabled:Boolean,onNavigate:(String)->Unit,onTheme:(String)->Unit,onConfirm:(Confirmation)->Unit) {
+@Composable private fun MyPage(s:LedgerState,actions:PlatformActions,lockEnabled:Boolean,onNavigate:(String)->Unit,onDetails:()->Unit,onTheme:(String)->Unit,onConfirm:(Confirmation)->Unit) {
     var passwordMode by remember {mutableStateOf<String?>(null)}
     LazyColumn(contentPadding=PaddingValues(16.dp,8.dp,16.dp,32.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        item {SectionTitle("记账工具")}
+        item {SettingRow("截图记账","选择本地截图，识别后核对并保存",onClick=actions::chooseScreenshot)}
+        item {SettingRow("账单明细","查看与搜索当前账本的账单",onClick=onDetails)}
         item {SectionTitle("我的账本")};item {SettingRow("账本管理","按用途独立记账；归档保留历史") {onNavigate("账本管理")}};item {SettingRow("分类管理","收入与支出分类可排序、停用") {onNavigate("分类管理")}};item {SettingRow("回收站","已删除 ${s.entries.count {!it.active}} 笔") {onNavigate("回收站")}}
         item {SectionTitle("本地数据")};item {SettingRow("导出 JSON 备份","包含账本、流水、退款、预算和回收站") {onConfirm(Confirmation("导出明文备份？","JSON 文件可被持有文件的人读取，请保存到你信任的本地位置。") {actions.exportBackup(false,charArrayOf())})}}
         item {SettingRow("导出加密备份","使用独立口令保护 .dwybak 文件") {passwordMode="export"}}

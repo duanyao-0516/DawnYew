@@ -107,7 +107,7 @@ class ControllerStateTest {
         controller.beginEditor("l1",capture=CaptureDraftUi("12.34"))
         controller.resetTransientState()
         assertNull(controller.editor.value)
-        assertEquals("明细",controller.navigation.value.page)
+        assertEquals("首页",controller.navigation.value.page)
     }
     @Test fun invalidStatisticsIsErrorAndNeverEmptyContent() {
         assertIs<StatisticsView.Error>(statisticsView(data,QueryScope(startDate="2026-02-30",endDate="2026-03-01")))
@@ -275,7 +275,8 @@ class ControllerStateTest {
         controller.acknowledgePendingOperation(operationId);runCurrent()
         assertNull(controller.pendingOperation.value)
         assertNull(controller.editor.value)
-        assertEquals("明细",controller.navigation.value.page)
+        assertEquals("首页",controller.navigation.value.page)
+        assertEquals("首页",controller.navigation.value.tab)
     }
     @Test fun failedNormalAcknowledgementDoesNotReportFailedCommitOrAllowNextWrite()=runTest {
         val repo=Repository(data);repo.acknowledgementFailure=true
@@ -304,6 +305,8 @@ class ControllerStateTest {
         assertEquals(setOf("l2"),controller.navigation.value.scope.ledgerIds)
         assertEquals("2026-04-01",controller.navigation.value.scope.startDate)
         assertEquals("2026-04-30",controller.navigation.value.scope.endDate)
+        assertEquals(controller.navigation.value.homeScope,controller.navigation.value.detailsScope)
+        assertEquals(controller.navigation.value.homeScope,controller.navigation.value.statisticsScope)
         val stale=AppController(Repository(restored.copy(preferences=listOf(UserPreference("lastLedgerId","missing"),UserPreference("lastPeriod","bad")))),Environment(),backgroundScope);runCurrent()
         assertEquals(setOf("l1"),stale.navigation.value.scope.ledgerIds)
         assertEquals("2026-10-01",stale.navigation.value.scope.startDate)
