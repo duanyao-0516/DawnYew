@@ -1,0 +1,50 @@
+{
+  "scope": "host model loading and real CPU inference on generated non-user text; not Android or payment accuracy acceptance",
+  "runtime": "1.31.0",
+  "opencv": "4.14.0",
+  "telemetry_disabled_before_import": true,
+  "dictionary_with_ctc_blank_and_space": 18385,
+  "expected": [
+    "支付成功",
+    "12.34",
+    "示例咖啡店"
+  ],
+  "recognized": [
+    "支付成功",
+    "12.34",
+    "示例咖啡店"
+  ],
+  "detection_shape": [
+    1,
+    1,
+    480,
+    640
+  ],
+  "text_regions": 3,
+  "inputs": {
+    "det": [
+      {
+        "name": "x",
+        "shape": [
+          "DynamicDimension.0",
+          3,
+          "DynamicDimension.1",
+          "DynamicDimension.2"
+        ],
+        "type": "tensor(float)"
+      }
+    ],
+    "rec": [
+      {
+        "name": "x",
+        "shape": [
+          "DynamicDimension.0",
+          3,
+          48,
+          "DynamicDimension.1"
+        ],
+        "type": "tensor(float)"
+      }
+    ]
+  }
+}

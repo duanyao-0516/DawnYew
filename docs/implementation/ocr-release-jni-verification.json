@@ -1,0 +1,27 @@
+{
+  "apk": "androidApp/build/outputs/apk/release/androidApp-release-unsigned.apk",
+  "apk_sha256": "7d3eceefc1a794eace9ff769d0bfc9ce572a953ae8b7ef3a02c8b3d1506ca92c",
+  "mapping_sha256": "34743546817f725f8d68ce74a1580fbc15adc3c5a8178dd8a8c315ba9c363dfe",
+  "aar_inputs": [
+    {
+      "file": "platform/android/libs/onnxruntime-no-telemetry-1.31.0.aar",
+      "sha256": "53938abfb1c53cdb2d1bd96471bcfa2caed00e0d7b4af838dbff7ef18667b1a0"
+    },
+    {
+      "file": "platform/android/libs/opencv-4.14.0.aar",
+      "sha256": "5bcb5e2a0befdda2abccf5d009a15db6d93568b73497ebfd152f2fb2723b11a8"
+    }
+  ],
+  "dex_files": [
+    "classes.dex"
+  ],
+  "required_definitions": {
+    "classes": 129,
+    "methods": 3006,
+    "fields": 1352
+  },
+  "app_obfuscation_active": true,
+  "missing_definitions": [],
+  "passed": true,
+  "scope": "Static JNI ABI retention only; real Android inference remains a separate device gate."
+}

@@ -1,0 +1,74 @@
+{
+  "format": "dawnyew-container-test-vectors-v1",
+  "warning": "TEST ONLY. Public deterministic password and RNG. Payload is a byte pattern, not a business JSON backup. Never link the generator into production.",
+  "libsodiumVersion": "1.0.22",
+  "sourceSha256": "adbdd8f16149e81ac6078a03aca6fc03b592b89ef7b5ed83841c086191be3349",
+  "password": "DawnYew-test-口令🗝",
+  "passwordUtf8Hex": "4461776e5965772d746573742de58fa3e4bba4f09f979d",
+  "saltHex": "000102030405060708090a0b0c0d0e0f",
+  "streamHeaderHex": "101112131415161718191a1b1c1d1e1f2021222324252627",
+  "derivedKeyHex": "b632a5d43640312166097dd45b0fdda65ff7e4ac77c6d79802718c2ce756c499",
+  "plaintextRule": "byte[i] = i % 251",
+  "headerHex": "44575942414b0d0a0001005000010001000000030000000004000000000100000010001800000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627",
+  "emptyContainerHex": "44575942414b0d0a0001005000010001000000030000000004000000000100000010001800000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627000000114bab7d96f011e0547b08d2f3359cde1e09",
+  "fixtures": [
+    {
+      "file": "pattern-0.dwybak",
+      "plaintextBytes": 0,
+      "ciphertextBytes": 101,
+      "frameCiphertextLengths": [
+        17
+      ],
+      "sha256": "06305fbda371e307276d3a84426b2e5819fdd7409b6163bc671f1986507df499"
+    },
+    {
+      "file": "pattern-1.dwybak",
+      "plaintextBytes": 1,
+      "ciphertextBytes": 102,
+      "frameCiphertextLengths": [
+        18
+      ],
+      "sha256": "0ce8aa751f8e9ce535c4c35bfbb52194629ae3dadb86ae4a588d201d14f774ab"
+    },
+    {
+      "file": "pattern-131072.dwybak",
+      "plaintextBytes": 131072,
+      "ciphertextBytes": 131215,
+      "frameCiphertextLengths": [
+        65553,
+        65553,
+        17
+      ],
+      "sha256": "464676b49366549eaa136852c6823b9f74c07406d20a0309fb99a798f4a38a2c"
+    },
+    {
+      "file": "pattern-65535.dwybak",
+      "plaintextBytes": 65535,
+      "ciphertextBytes": 65636,
+      "frameCiphertextLengths": [
+        65552
+      ],
+      "sha256": "5060ac981f5e647b1f4b4a5c6a992b2eb6ea701b6c833c0d20fab6687c22d104"
+    },
+    {
+      "file": "pattern-65536.dwybak",
+      "plaintextBytes": 65536,
+      "ciphertextBytes": 65658,
+      "frameCiphertextLengths": [
+        65553,
+        17
+      ],
+      "sha256": "796ba8b0afd4c1165f154c609e4b6cbf329395f38b6c5f51935c5a4b00f84988"
+    },
+    {
+      "file": "pattern-65537.dwybak",
+      "plaintextBytes": 65537,
+      "ciphertextBytes": 65659,
+      "frameCiphertextLengths": [
+        65553,
+        18
+      ],
+      "sha256": "8d81d78cb13bbf5f63ba0a8905e56773caed8e3e3faa8c8fbf6e9cc2a79b9930"
+    }
+  ]
+}

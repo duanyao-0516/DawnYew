@@ -1,5 +1,9 @@
 # Gradle files
 .gradle/
+.kotlin/
+.local/
+artifacts/device/
+artifacts/releases/
 build/
 
 # Local configuration file (sdk path, etc)
@@ -7,6 +11,9 @@ local.properties
 
 # Log/OS Files
 *.log
+.DS_Store
+__pycache__/
+*.py[cod]
 
 # Android Studio generated files and folders
 captures/
@@ -14,6 +21,7 @@ captures/
 .cxx/
 *.aab
 *.apk
+*.apk.idsig
 output-metadata.json
 
 # IntelliJ

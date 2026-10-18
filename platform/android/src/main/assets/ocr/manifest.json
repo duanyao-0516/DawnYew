@@ -1,0 +1,23 @@
+{
+  "sdk_commit": "dab3fe35379033fdcb2d0e9572fac0b36c9a9ebf",
+  "runtime": "ONNX Runtime 1.31.0 CPU --no_telemetry",
+  "opencv": "4.14.0",
+  "models": {
+    "det": {
+      "repository": "PaddlePaddle/PP-OCRv5_mobile_det_onnx",
+      "revision": "e6f4fa85f00e168c862bc462aebca69eef9b3d3d",
+      "files": {
+        "inference.onnx": "a431985659dc921974177a95adcfbb90fd9e51989a5e04d70d0b75f597b6e61d",
+        "inference.yml": "98069072e1b6b37d727fd9d9f11725faa46d6ea0de012f2ed26caea011c37699"
+      }
+    },
+    "rec": {
+      "repository": "PaddlePaddle/PP-OCRv5_mobile_rec_onnx",
+      "revision": "ed152b8b495f84de93cda5709d768548a9127622",
+      "files": {
+        "inference.onnx": "da72dc72ca4dc220df0dfde68c1dedc31c58d3e76a25871122e5056227d50092",
+        "inference.yml": "5dfeb2777f6d0db8177d8128a8acfcf6e6276dc4ac73ea3bf0dc06d6a5e85d8e"
+      }
+    }
+  }
+}

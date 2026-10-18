@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-18",
+  "minimum_android_api": 30,
+  "ndk": "28.2.13676358",
+  "linker_page_size": 16384,
+  "telemetry": "ORT source build --no_telemetry; CMake cache OFF; static marker checks passed",
+  "device_validation": "not performed",
+  "artifacts": [
+    {
+      "file": "platform/android/libs/onnxruntime-no-telemetry-1.31.0.aar",
+      "bytes": 13631739,
+      "sha256": "53938abfb1c53cdb2d1bd96471bcfa2caed00e0d7b4af838dbff7ef18667b1a0",
+      "native_libraries": [
+        {
+          "file": "jni/arm64-v8a/libonnxruntime.so",
+          "bytes": 19684336,
+          "sha256": "fd9c6eacc622be0e013137864c9f4320876a94fc1e49f2b742c1f981272c51f0",
+          "pt_load_alignment": [
+            16384,
+            16384,
+            16384,
+            16384
+          ]
+        },
+        {
+          "file": "jni/arm64-v8a/libonnxruntime4j_jni.so",
+          "bytes": 118560,
+          "sha256": "7ef71a940e536985ef10f06bab186872394e1c7e0ca05c7e855838823c2de3fe",
+          "pt_load_alignment": [
+            16384,
+            16384,
+            16384
+          ]
+        },
+        {
+          "file": "jni/x86_64/libonnxruntime.so",
+          "bytes": 20076352,
+          "sha256": "8844f917a2684e2536c3a99d3b66c47bd5174cb24c7877245aea6954e6c52d9d",
+          "pt_load_alignment": [
+            16384,
+            16384,
+            16384,
+            16384
+          ]
+        },
+        {
+          "file": "jni/x86_64/libonnxruntime4j_jni.so",
+          "bytes": 100912,
+          "sha256": "040d618263c30d5e2a847baae3f2cc7506c84a4e74c65078e84a8ac827658579",
+          "pt_load_alignment": [
+            16384,
+            16384,
+            16384
+          ]
+        }
+      ]
+    },
+    {
+      "file": "platform/android/libs/opencv-4.14.0.aar",
+      "bytes": 6695244,
+      "sha256": "5bcb5e2a0befdda2abccf5d009a15db6d93568b73497ebfd152f2fb2723b11a8",
+      "native_libraries": [
+        {
+          "file": "jni/arm64-v8a/libopencv_java4.so",
+          "bytes": 7661224,
+          "sha256": "074c592d3e8344de8674bab8b776f629f29d41222ed30c0e07a21f46289779e3",
+          "pt_load_alignment": [
+            16384,
+            16384,
+            16384,
+            16384
+          ]
+        },
+        {
+          "file": "jni/x86_64/libopencv_java4.so",
+          "bytes": 10621904,
+          "sha256": "e294a92018c75d1f079e7d65fe2cf9de85b5edeba06a1509525ca216cc4d0ac1",
+          "pt_load_alignment": [
+            16384,
+            16384,
+            16384,
+            16384
+          ]
+        }
+      ]
+    }
+  ]
+}

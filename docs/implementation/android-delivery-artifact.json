@@ -1,0 +1,97 @@
+{
+  "apk": "artifacts/releases/DawnYew-0.1.0-arm64-dev-release.apk",
+  "bytes": 51619797,
+  "sha256": "204a972125e7dc8b6dc27968b5de8fa39c87e62a7825bf7381a117a43a21ace4",
+  "nativeLibraries": [
+    {
+      "path": "lib/arm64-v8a/libandroidx.graphics.path.so",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "sha256": "41e9a793c43a0f4fddb19e33f346bace464f30f888ba7b9eaf96294ea115bfb6"
+    },
+    {
+      "path": "lib/arm64-v8a/libdawnyew_crypto.so",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384,
+        16384
+      ],
+      "sha256": "dd0a099f8e2f1b07543039ddf9f95d49011a1f82156af7377e277ad52928b16e"
+    },
+    {
+      "path": "lib/arm64-v8a/libonnxruntime.so",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384,
+        16384
+      ],
+      "sha256": "29fb21c1556d06e6c74a548296f304015bae695453afbcce44ecbdf1e48b040d"
+    },
+    {
+      "path": "lib/arm64-v8a/libonnxruntime4j_jni.so",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "sha256": "ad43fea49c4f8453daa2f6c9b40627a73ead4763e068dda4feb96af7774e9d3c"
+    },
+    {
+      "path": "lib/arm64-v8a/libopencv_java4.so",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384,
+        16384
+      ],
+      "sha256": "074c592d3e8344de8674bab8b776f629f29d41222ed30c0e07a21f46289779e3"
+    },
+    {
+      "path": "lib/arm64-v8a/libsqliteJni.so",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384,
+        16384
+      ],
+      "sha256": "a3b7e03667fb5b0591ec74249b8012b389afff4fdfeb8e5123eebd1786def808"
+    }
+  ],
+  "hostTests": {
+    "shared/core": {
+      "tests": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "shared/protocol": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "shared/storage": {
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "shared/presentation": {
+      "tests": 38,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "platform/android": {
+      "tests": 88,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  }
+}

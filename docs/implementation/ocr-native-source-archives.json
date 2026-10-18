@@ -1,0 +1,12 @@
+[
+  {
+    "filename": "opencv-4.14.0.tar.gz",
+    "bytes": 96287941,
+    "sha256": "ee8fb9b30eb60850431b4656447080e3737b56e45719c92b67f245950609f86e"
+  },
+  {
+    "filename": "onnxruntime-1.31.0.tar.gz",
+    "bytes": 280355422,
+    "sha256": "a7e84230b5d509e48fbd6b73c2453a56345ccb22da34a46dac1f0cb4a2d6507b"
+  }
+]

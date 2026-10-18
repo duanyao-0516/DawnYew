@@ -1,0 +1,11 @@
+* text=auto
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+
+# Preserve bundled native dependencies, models and binary test fixtures exactly.
+*.aar -text
+*.jar -text
+*.onnx -text
+*.so -text
+*.dwybak -text
