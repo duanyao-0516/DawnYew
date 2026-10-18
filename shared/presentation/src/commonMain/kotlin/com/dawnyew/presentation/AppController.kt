@@ -4,7 +4,7 @@ import com.dawnyew.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-data class AppUiState(val dataset:LedgerState?=null,val busy:Boolean=false,val message:String?=null)
+data class AppUiState(val dataset:LedgerState?=null,val busy:Boolean=false,val message:String?=null,val savingPreference:Boolean=false)
 data class CaptureDraftUi(val amount:String="",val occurrence:String="",val note:String="",val warnings:List<String> = emptyList(),val supported:Boolean=true,val engineVersion:String?=null,val fingerprint:String?=null,val duplicateWarning:Boolean=false)
 data class TemplateUi(val name:String,val reason:String)
 val billTemplates = com.dawnyew.protocol.TemplateRegistry.templates.map { TemplateUi(it.name,it.reason) }
@@ -26,7 +26,18 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     val pendingOperation:StateFlow<PendingOperationRecovery?> = mutablePendingOperation.asStateFlow()
     private val paging = EntryPagingCoordinator(repository, scope)
     val entries: StateFlow<EntryPageUi> = paging.state
+    private val statisticsCoordinator=StatisticsCoordinator(repository,scope)
+    val statistics:StateFlow<StatisticsPageUi> = statisticsCoordinator.state
+    fun loadStatistics(query:QueryScope,force:Boolean=false)=statisticsCoordinator.load(query,force)
     fun loadEntries(query: QueryScope, append: Boolean = false, force: Boolean = false) = paging.load(query, append, force)
+    /** Called after external-result authorization is restored; supersede reads holding the old authorization. */
+    fun resumeVisibleQueries() {
+        val navigation=mutableNavigation.value
+        when(navigation.page) {
+            "明细" -> paging.load(navigation.scope,force=entries.value.loading || entries.value.error!=null)
+            "统计" -> statisticsCoordinator.load(navigation.scope,force=statistics.value.loading || statistics.value.error!=null)
+        }
+    }
     suspend fun queryStatistics(query: QueryScope): StatisticsView = try {
         val snapshot = repository.statistics(query)
         snapshot.netExpense; snapshot.netIncome
@@ -79,10 +90,9 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
                     queuedPreferences.remove(key);continue
                 }
                 var committed=false
-                val job=perform(Command.SetPreference(key,value)) {
+                val job=performOperation(Command.SetPreference(key,value),environment.id(),savingPreference=true) {
                     committed=true
                     if(generation==preferenceGeneration && queuedPreferences[key]==value) queuedPreferences.remove(key)
-                    if(mutable.value.message=="已保存") clearMessage()
                 }
                 job?.join()
                 // A failed write retains the queued choice for the next explicit selection; never spin/retry forever.
@@ -172,6 +182,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     fun resetTransientState() {
         clearEditor()
         paging.clear()
+        statisticsCoordinator.clear()
         clearQueuedPreferences()
         navigationDatasetId=null
         val data=repository.state.value
@@ -192,6 +203,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     }
     init {
         scope.launch { repository.state.collect { data ->
+            if(data==null || mutable.value.dataset?.datasetId?.let {it!=data.datasetId}==true) {paging.clear();statisticsCoordinator.clear()}
             mutable.update { it.copy(dataset=data) }
             if(data!=null && navigationDatasetId!=data.datasetId) {clearQueuedPreferences();restoreNavigationPreferences(data)}
         } }
@@ -215,11 +227,13 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
             finally {mutable.update {it.copy(busy=false)}}
         }
     }
-    fun perform(command:Command,operationId:String=environment.id(),onSuccess:(List<String>)->Unit={}):Job? {
+    fun perform(command:Command,operationId:String=environment.id(),onSuccess:(List<String>)->Unit={}):Job? =
+        performOperation(command,operationId,savingPreference=false,onSuccess)
+    private fun performOperation(command:Command,operationId:String,savingPreference:Boolean,onSuccess:(List<String>)->Unit):Job? {
         if(mutable.value.busy) return null
         val pending=mutablePendingOperation.value
         if(pending!=null && pending.operationId!=operationId) {notify("请先确认上次操作的保存结果");return null}
-        mutable.update { it.copy(busy=true) }
+        mutable.update { it.copy(busy=true,savingPreference=savingPreference) }
         return scope.launch {
             try {
                 val ids=try {repository.execute(command,operationId)}
@@ -230,7 +244,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
                     return@launch
                 }
                 val committed=PendingOperationRecovery(operationId,OperationOutcome(operationId,command::class.simpleName ?: "Command",ids))
-                notify("已保存")
+                if(!savingPreference) notify("已保存")
                 try {onSuccess(ids)}
                 catch(cancelled:CancellationException) {throw cancelled}
                 catch(_:Exception) {
@@ -246,7 +260,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
                     mutablePendingOperation.value=committed
                     notify("数据已保存，结果确认未完成，请确认后继续")
                 }
-            } finally {mutable.update {it.copy(busy=false)}}
+            } finally {mutable.update {it.copy(busy=false,savingPreference=false)}}
         }
     }
     fun notify(message:String) { mutable.update { it.copy(message=message) } }

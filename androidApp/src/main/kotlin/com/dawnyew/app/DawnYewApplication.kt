@@ -19,7 +19,7 @@ import java.io.File
 
 /** A picker continuation is process-only and contains no Activity or view references. */
 data class PendingExternal(val type: String, val lease: SessionCoordinator.Lease, val databaseEpoch: Long, val file: File? = null,
-    val password: CharArray = charArrayOf(), var returnedUri: Uri? = null)
+    val password: CharArray = charArrayOf(), var returnedUri: Uri? = null, var resultReceived: Boolean = false)
 
 class DawnYewApplication : Application() {
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

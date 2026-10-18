@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -22,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.dawnyew.core.*
 import com.dawnyew.platform.crypto.BackupCrypto
@@ -42,6 +44,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
     private val staging get()=File(noBackupFilesDir,"staging").apply {check(isDirectory || mkdirs()) {"无法创建本机暂存目录"}}
     private var unlocked by mutableStateOf(false)
     private var covered by mutableStateOf(true)
+    private var retainContentForPicker by mutableStateOf(false)
     private var lockEnabled by mutableStateOf(false)
     private var capture by mutableStateOf<CaptureDraftUi?>(null)
     private var authentication:BiometricPrompt?=null
@@ -60,41 +63,58 @@ class MainActivity:FragmentActivity(),PlatformActions {
     private var authFailure:(()->Unit)?=null
     private var authCompleted=false
     private var backHandler:(()->Unit)?=null
-    private val formBackCallback=object:OnBackPressedCallback(false) {override fun handleOnBackPressed() {backHandler?.invoke()}}
+    private val formBackCallback=object:OnBackPressedCallback(false) {override fun handleOnBackPressed() {if(unlocked && !covered)backHandler?.invoke()}}
     private val deviceLocked get()=(getSystemService(KEYGUARD_SERVICE) as KeyguardManager).isDeviceLocked
-    private val documentLauncher=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {result->
-        val operation=external ?: return@registerForActivityResult
-        val uri=result.data?.data
-        if(result.resultCode!=RESULT_OK || uri==null || !app.session.externalIsCurrent(operation.lease) || operation.databaseEpoch!=repository.epoch) {
-            app.session.finishExternal(operation.lease);app.discardExternal()
-            if(uri!=null) controller.notify("文件操作授权已过期，请重新发起")
-            return@registerForActivityResult
+    private var documentLauncher:ActivityResultLauncher<Intent>?=null
+    private fun registerDocumentLauncher(operation:PendingExternal) {
+        releaseDocumentLauncher()
+        // A distinct registry key binds late results to their original operation, including after rotation.
+        val key="document-${operation.lease.process}-${operation.lease.id}"
+        documentLauncher=activityResultRegistry.register(key,ActivityResultContracts.StartActivityForResult()) {result->
+            if(external!==operation || operation.resultReceived) return@register
+            if(!app.session.externalIsCurrent(operation.lease) || operation.databaseEpoch!=repository.epoch) {
+                app.revokeSession();unlocked=app.session.authorized;retainContentForPicker=false
+                controller.notify("文件操作授权已过期，请重新发起")
+                return@register
+            }
+            operation.resultReceived=true
+            operation.returnedUri=if(result.resultCode==RESULT_OK)result.data?.data else null
+            continueReturnedExternal()
         }
-        operation.returnedUri=uri
-        continueReturnedExternal()
     }
+    private fun releaseDocumentLauncher() {documentLauncher?.unregister();documentLauncher=null}
     private fun continueReturnedExternal() {
         val operation=external ?: return
-        val uri=operation.returnedUri ?: return
-        if(!resumed || authRunning)return
+        if(!operation.resultReceived || !resumed || authRunning)return
         if(!app.session.externalIsCurrent(operation.lease) || operation.databaseEpoch!=repository.epoch || deviceLocked) {app.revokeSession();unlocked=app.session.authorized;return}
-        // The picker can obscure Home/lock transitions. Its result never reuses an old protected session.
-        sensitive("继续本地文件操作",onCancelled={app.session.finishExternal(operation.lease);app.discardExternal()}) {
-            if(external!==operation || operation.databaseEpoch!=repository.epoch || !app.session.finishExternal(operation.lease)) {app.discardExternal();return@sensitive}
-            external=null
-            when(operation.type) {
-                "export" -> finishExport(uri,requireNotNull(operation.file))
-                "restore" -> readRestore(uri,operation.password)
-                "image" -> recognize(uri)
+        if(!app.session.resumeExternal(operation.lease)) {app.revokeSession();unlocked=app.session.authorized;return}
+        unlocked=app.session.authorized;retainContentForPicker=false;releaseDocumentLauncher()
+        controller.resumeVisibleQueries()
+        val uri=operation.returnedUri
+        if(uri==null) {app.session.finishExternal(operation.lease);app.discardExternal();return}
+        val action:()->Unit={
+            if(external!==operation || operation.databaseEpoch!=repository.epoch || !app.session.finishExternal(operation.lease)) app.discardExternal()
+            else {
+                external=null
+                when(operation.type) {
+                    "export" -> finishExport(uri,requireNotNull(operation.file))
+                    "restore" -> readRestore(uri,operation.password)
+                    "image" -> recognize(uri)
+                }
             }
         }
+        // A screenshot uses the existing session; export and restore retain their fresh sensitive-operation check.
+        if(operation.type=="image") action()
+        else sensitive("继续本地文件操作",onCancelled={app.discardExternal()},action=action)
     }
 
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState);enableEdgeToEdge();onBackPressedDispatcher.addCallback(this,formBackCallback)
         lockEnabled=app.lockStore.enabled;unlocked=app.session.authorized
+        external?.takeIf {app.session.externalIsCurrent(it.lease)}?.let {retainContentForPicker=true;registerDocumentLauncher(it)}
         lifecycleScope.launch {app.sessionRevocations.collect {
             unlocked=app.session.authorized
+            if(external==null) {retainContentForPicker=false;releaseDocumentLauncher()}
             if(authAttempt?.let {attempt->!app.session.authenticationIsCurrent(attempt)}==true)cancelAuthentication()
             fileJob?.cancel();restorePreviewDialog?.dismiss();restorePreviewDialog=null
         }}
@@ -103,10 +123,14 @@ class MainActivity:FragmentActivity(),PlatformActions {
         setContent {
             val startupError by app.startupError.collectAsState()
             Box(Modifier.fillMaxSize()) {
-                if(unlocked && !covered) {
+                if(unlocked || retainContentForPicker) {
+                    Box(if(covered || !unlocked) Modifier.clearAndSetSemantics {} else Modifier) {
                     if(startupError!=null) DawnYewTheme {Surface(Modifier.fillMaxSize()) {Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.Center) {Text(startupError!!);Button(onClick={app.initialize()}) {Text("重试读取")};Button(onClick={restoreProtectionBackup()}) {Text("验证并恢复保护副本")}}}}
                     else DawnYewApp(controller,this@MainActivity,lockEnabled,capture,onBackHandlerChanged={handler->backHandler=handler;formBackCallback.isEnabled=handler!=null}) {capture=null}
-                } else DawnYewTheme {Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
+                    }
+                }
+                // Material3 Surface blocks touches to siblings behind it while allowing its own unlock button.
+                if(covered || !unlocked) DawnYewTheme {Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
                     Column(Modifier.fillMaxSize().padding(32.dp).safeDrawingPadding(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
                         Text("DawnYew",style=MaterialTheme.typography.headlineLarge);Spacer(Modifier.height(16.dp));Text(if(app.lockStore.repairRequired) "安全设置需要通过设备认证修复" else "账本已保护")
                         if(!covered) {Spacer(Modifier.height(24.dp));Button(onClick={unlock()}) {Text("解锁账本")}}
@@ -118,7 +142,10 @@ class MainActivity:FragmentActivity(),PlatformActions {
     override fun onResume() {
         super.onResume();resumed=true;covered=false
         app.session.foreground(deviceLocked);unlocked=app.session.authorized
-        external?.let {if(!app.session.externalIsCurrent(it.lease))app.discardExternal()}
+        external?.let {
+            // Resuming without this launcher's result is an unrelated return, not a picker continuation.
+            if(!it.resultReceived || !app.session.externalIsCurrent(it.lease)) {app.revokeSession();unlocked=app.session.authorized;retainContentForPicker=false;releaseDocumentLauncher()}
+        }
         if(authAttempt?.let { !app.session.authenticationIsCurrent(it) }==true) cancelAuthentication()
         completeAuthentication()
         if(unlocked) {app.initialize();consumeShare()}
@@ -135,13 +162,15 @@ class MainActivity:FragmentActivity(),PlatformActions {
         authAttempt?.let(app.session::cancelAuthentication)
         authAttempt=null;authSuccess=null;authFailure?.invoke();authFailure=null;authCompleted=false
         authentication?.cancelAuthentication();authentication=null;authRunning=false
+        releaseDocumentLauncher()
         restorePreviewDialog?.dismiss();pendingRestoreCandidate?.let(::discardRestoreCandidate);pendingRestoreCandidate=null
         // A legitimate picker rotation keeps only its process-owned operation payload.
-        if(!isChangingConfigurations) {external?.let {app.session.finishExternal(it.lease)};app.discardExternal()}
+        if(!isChangingConfigurations) app.discardExternal()
         super.onDestroy()
     }
     override fun onNewIntent(intent:Intent) {
         super.onNewIntent(intent);app.revokeSession();cancelAuthentication();fileJob?.cancel();unlocked=app.session.authorized
+        retainContentForPicker=false;releaseDocumentLauncher()
         pendingShare=null;setIntent(intent);acceptShare(intent);if(unlocked) consumeShare()
     }
     private fun acceptShare(intent:Intent?) {
@@ -203,8 +232,9 @@ class MainActivity:FragmentActivity(),PlatformActions {
     }
     private fun launchExternal(operation:PendingExternal,intent:Intent) {
         if(external!=null) {operation.password.fill('\u0000');operation.file?.delete();controller.notify("已有文件选择操作进行中");return}
-        external=operation
-        try {documentLauncher.launch(intent)} catch(e:Exception) {app.session.finishExternal(operation.lease);external=null;operation.file?.delete();operation.password.fill('\u0000');controller.notify("设备没有可用的本地文件选择器")}
+        external=operation;retainContentForPicker=true
+        try {registerDocumentLauncher(operation);requireNotNull(documentLauncher).launch(intent)}
+        catch(e:Exception) {app.discardExternal();retainContentForPicker=false;releaseDocumentLauncher();controller.notify("设备没有可用的本地文件选择器")}
     }
     private fun pending(type:String,file:File?=null,password:CharArray=charArrayOf())=PendingExternal(type,app.session.beginExternal(),repository.epoch,file,password)
     private fun runFileTask(onRejected:()->Unit={},block:suspend CoroutineScope.()->Unit) {

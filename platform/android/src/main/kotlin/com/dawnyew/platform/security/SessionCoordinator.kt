@@ -11,6 +11,8 @@ class SessionCoordinator(private val now: () -> Long, private val processId: Str
     private var sequence = 0L
     private var external: Lease? = null
     private var authentication: Lease? = null
+    private var inForeground = false
+    private var externalDeparted = false
 
     fun configureLock(enabled: Boolean) { lockEnabled = enabled; if (!enabled) authorized = true }
     fun beginAuthentication(): Lease {
@@ -20,31 +22,40 @@ class SessionCoordinator(private val now: () -> Long, private val processId: Str
     fun authenticationIsCurrent(attempt: Lease): Boolean = authentication == attempt && valid(attempt)
     fun finishAuthentication(attempt: Lease, foreground: Boolean, deviceLocked: Boolean): Boolean {
         if (!foreground || deviceLocked || !authenticationIsCurrent(attempt)) return false
-        authentication = null; authorized = true; return true
+        authentication = null; inForeground = true; authorized = true; return true
     }
     fun cancelAuthentication(attempt: Lease) { if (authentication == attempt) authentication = null }
     fun beginExternal(): Lease {
         check(authorized) { "应用尚未授权" }; check(external == null) { "已有文件操作" }
+        externalDeparted = false
         return lease().also { external = it }
     }
     fun externalIsCurrent(value: Lease): Boolean = external == value && valid(value)
-    fun cancelExternal(value: Lease) { if (external == value) external = null }
-    fun finishExternal(value: Lease): Boolean {
-        if (!externalIsCurrent(value)) return false
-        external = null; return true
+    fun cancelExternal(value: Lease) { if (external == value) { external = null; externalDeparted = false } }
+    /** Call only for the matching ActivityResult, after the activity is resumed. */
+    fun resumeExternal(value: Lease): Boolean {
+        if (!inForeground || authentication != null || !externalIsCurrent(value)) return false
+        authorized = true; return true
     }
-    /** Leaving for a picker suspends authorization; its result still needs fresh device authentication. */
+    fun finishExternal(value: Lease): Boolean {
+        if (!resumeExternal(value)) return false
+        cancelExternal(value); return true
+    }
+    /** Only the registered picker's first departure can suspend rather than revoke the session. */
     fun background(changingConfigurations: Boolean) {
+        inForeground = false
         if (changingConfigurations) return
         authorized = !lockEnabled
-        if (external == null && authentication == null) revoke()
+        if (authentication?.let(::valid) == true) return
+        if (external?.let(::valid) == true && !externalDeparted) { externalDeparted = true; return }
+        revoke()
     }
     fun foreground(deviceLocked: Boolean) {
-        if (deviceLocked) revoke()
-        if (external?.let { !valid(it) } == true) { external = null; epoch++ }
+        inForeground = !deviceLocked
+        if (deviceLocked || external?.let { !valid(it) } == true) revoke()
         if (authentication?.let { !valid(it) } == true) authentication = null
     }
-    fun revoke() { epoch++; external = null; authentication = null; authorized = !lockEnabled }
+    fun revoke() { epoch++; external = null; externalDeparted = false; authentication = null; authorized = !lockEnabled }
     private fun lease(): Lease { val time = now(); return Lease(++sequence, epoch, time, time + 120_000, processId) }
     private fun valid(value: Lease): Boolean = value.process == processId && value.epoch == epoch && now() in value.issued..value.deadline
 }
