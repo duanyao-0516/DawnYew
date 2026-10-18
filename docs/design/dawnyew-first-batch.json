@@ -1,0 +1,1653 @@
+{
+  "schemaVersion": 1,
+  "title": "DawnYew 首批界面与原型",
+  "status": "created-in-figma-core-prototype-verified",
+  "spec": "../superpowers/specs/2026-10-18-dawnyew-ui-interaction-standard.md",
+  "canvas": {
+    "width": 390,
+    "height": 844,
+    "units": "logical",
+    "fontScaleChecks": [
+      1,
+      2
+    ]
+  },
+  "verificationStatus": {
+    "accounting": "checked",
+    "figmaLayers": "checked-native-editable",
+    "prototypeGraph": "137-explicit-links-checked",
+    "prototypePlayback": "core-flow-drilldown-trend-and-book-switch-checked",
+    "responsiveLayout": "360-width-and-200-percent-samples-visually-checked",
+    "deviceAccessibility": "not-run",
+    "landscape": "not-run"
+  },
+  "layoutChecks": [
+    "360 宽明细与录入",
+    "明细与录入 200% 字号",
+    "横屏滚动与安全区",
+    "录入键盘出现后金额、错误与保存操作可达"
+  ],
+  "fontPolicy": "已验证并使用 Noto Sans SC Regular / Medium / Bold；图层读取无缺失字体。",
+  "delivery": [
+    "原生可编辑图层",
+    "组件实例",
+    "颜色与尺寸变量",
+    "核心原型连线",
+    "浅深色",
+    "空态与金额错误",
+    "大字号检查"
+  ],
+  "prototypeLimit": "原型使用预置的 32.50 元午餐录入场景；不宣称支持任意键盘输入、真实保存、OCR、文件解析或系统认证。",
+  "dataNotice": "以下全部为虚构演示数据。",
+  "period": "2026-10",
+  "books": [
+    {
+      "id": "daily",
+      "name": "日常",
+      "monthlyBudgetCents": 200000
+    },
+    {
+      "id": "travel",
+      "name": "旅行",
+      "monthlyBudgetCents": null
+    }
+  ],
+  "records": [
+    {
+      "id": "D01",
+      "date": "2026-10-03",
+      "book": "daily",
+      "type": "income",
+      "category": "工资",
+      "amountCents": 850000,
+      "note": "十月工资"
+    },
+    {
+      "id": "D02",
+      "date": "2026-10-05",
+      "book": "daily",
+      "type": "expense",
+      "category": "餐饮",
+      "amountCents": 36000,
+      "note": "聚餐"
+    },
+    {
+      "id": "D03",
+      "date": "2026-10-06",
+      "book": "daily",
+      "type": "expense",
+      "category": "交通",
+      "amountCents": 24000,
+      "note": "通勤月票"
+    },
+    {
+      "id": "D04",
+      "date": "2026-10-07",
+      "book": "daily",
+      "type": "expense",
+      "category": "购物",
+      "amountCents": 30000,
+      "note": "运动鞋"
+    },
+    {
+      "id": "D05",
+      "date": "2026-10-09",
+      "book": "daily",
+      "type": "expense",
+      "category": "其他",
+      "amountCents": 30000,
+      "note": "健身月卡"
+    },
+    {
+      "id": "D06",
+      "date": "2026-10-12",
+      "book": "daily",
+      "type": "expense",
+      "category": "餐饮",
+      "amountCents": 24000,
+      "note": "周末聚餐"
+    },
+    {
+      "id": "D07",
+      "date": "2026-10-14",
+      "book": "daily",
+      "type": "expense",
+      "category": "购物",
+      "amountCents": 12000,
+      "note": "文具"
+    },
+    {
+      "id": "D08",
+      "date": "2026-10-16",
+      "book": "daily",
+      "type": "refund",
+      "category": "购物",
+      "amountCents": 6000,
+      "note": "运动鞋部分退款",
+      "originalExpenseId": "D04"
+    },
+    {
+      "id": "T01",
+      "date": "2026-10-02",
+      "book": "travel",
+      "type": "expense",
+      "category": "交通",
+      "amountCents": 24000,
+      "note": "高铁"
+    },
+    {
+      "id": "T02",
+      "date": "2026-10-03",
+      "book": "travel",
+      "type": "expense",
+      "category": "住宿",
+      "amountCents": 40000,
+      "note": "民宿"
+    }
+  ],
+  "newRecord": {
+    "id": "D09",
+    "date": "2026-10-18",
+    "book": "daily",
+    "type": "expense",
+    "category": "餐饮",
+    "amountCents": 3250,
+    "note": "午餐"
+  },
+  "expected": {
+    "dailyBefore": {
+      "incomeCents": 850000,
+      "expenseCents": 156000,
+      "refundCents": 6000,
+      "netExpenseCents": 150000,
+      "balanceCents": 700000,
+      "budgetRemainingCents": 50000,
+      "budgetPercent": "75.00"
+    },
+    "dailyAfter": {
+      "incomeCents": 850000,
+      "expenseCents": 159250,
+      "refundCents": 6000,
+      "netExpenseCents": 153250,
+      "balanceCents": 696750,
+      "budgetRemainingCents": 46750,
+      "budgetPercent": "76.63"
+    },
+    "allBefore": {
+      "incomeCents": 850000,
+      "expenseCents": 220000,
+      "refundCents": 6000,
+      "netExpenseCents": 214000,
+      "balanceCents": 636000
+    },
+    "allAfter": {
+      "incomeCents": 850000,
+      "expenseCents": 223250,
+      "refundCents": 6000,
+      "netExpenseCents": 217250,
+      "balanceCents": 632750
+    },
+    "travel": {
+      "incomeCents": 0,
+      "expenseCents": 64000,
+      "refundCents": 0,
+      "netExpenseCents": 64000,
+      "balanceCents": -64000
+    },
+    "firstEntryAfter": {
+      "incomeCents": 0,
+      "expenseCents": 3250,
+      "refundCents": 0,
+      "netExpenseCents": 3250,
+      "balanceCents": -3250
+    }
+  },
+  "labelRules": {
+    "balanceCents": "收支结余",
+    "categoryDenominator": "原始支出",
+    "refund": "退款",
+    "rounding": "占比经四舍五入"
+  },
+  "frames": [
+    {
+      "key": "home-before",
+      "page": "明细",
+      "state": "dailyBefore",
+      "theme": "light"
+    },
+    {
+      "key": "entry-ready",
+      "page": "记一笔",
+      "state": "newRecord",
+      "theme": "light"
+    },
+    {
+      "key": "stats-before",
+      "page": "统计",
+      "state": "dailyBefore",
+      "theme": "light"
+    },
+    {
+      "key": "book-picker",
+      "page": "账本选择",
+      "state": "dailyBefore",
+      "theme": "light"
+    },
+    {
+      "key": "book-management",
+      "page": "管理账本",
+      "state": "dailyBefore",
+      "theme": "light"
+    },
+    {
+      "key": "home-after",
+      "page": "明细",
+      "state": "dailyAfter",
+      "theme": "light"
+    },
+    {
+      "key": "stats-after",
+      "page": "统计",
+      "state": "dailyAfter",
+      "theme": "light"
+    },
+    {
+      "key": "food-detail-after",
+      "page": "餐饮明细",
+      "state": "dailyAfter",
+      "theme": "light",
+      "expenseCents": 63250,
+      "count": 3
+    },
+    {
+      "key": "travel-home",
+      "page": "旅行明细",
+      "state": "travel",
+      "theme": "light"
+    },
+    {
+      "key": "all-home",
+      "page": "全部账本",
+      "state": "allBefore",
+      "theme": "light"
+    },
+    {
+      "key": "entry-error",
+      "page": "记一笔",
+      "state": "32.500",
+      "theme": "light",
+      "message": "金额最多保留两位小数"
+    },
+    {
+      "key": "discard-confirmation",
+      "page": "放弃修改确认",
+      "theme": "light"
+    },
+    {
+      "key": "first-entry-empty",
+      "page": "明细",
+      "state": "empty",
+      "theme": "light",
+      "separateFlow": true
+    },
+    {
+      "key": "first-entry-after",
+      "page": "明细",
+      "state": "firstEntryAfter",
+      "theme": "light",
+      "separateFlow": true
+    },
+    {
+      "key": "home-large-type",
+      "page": "明细",
+      "state": "dailyBefore",
+      "theme": "light",
+      "fontScale": 2
+    },
+    {
+      "key": "home-dark",
+      "page": "明细",
+      "state": "dailyBefore",
+      "theme": "dark"
+    },
+    {
+      "key": "entry-dark",
+      "page": "记一笔",
+      "state": "newRecord",
+      "theme": "dark"
+    },
+    {
+      "key": "stats-dark",
+      "page": "统计",
+      "state": "dailyBefore",
+      "theme": "dark"
+    },
+    {
+      "key": "book-picker-dark",
+      "page": "账本选择",
+      "state": "dailyBefore",
+      "theme": "dark"
+    },
+    {
+      "key": "first-entry-ready",
+      "page": "记一笔",
+      "state": "newRecord",
+      "theme": "light",
+      "separateFlow": true,
+      "saveTarget": "first-entry-after"
+    },
+    {
+      "key": "entry-from-stats",
+      "page": "记一笔",
+      "state": "newRecord",
+      "theme": "light",
+      "saveTarget": "stats-after"
+    },
+    {
+      "key": "book-picker-after",
+      "page": "账本选择",
+      "state": "dailyAfter",
+      "theme": "light"
+    },
+    {
+      "key": "all-home-after",
+      "page": "全部账本",
+      "state": "allAfter",
+      "theme": "light"
+    },
+    {
+      "key": "book-picker-from-stats",
+      "page": "账本选择",
+      "state": "dailyBefore",
+      "theme": "light",
+      "destination": "统计"
+    },
+    {
+      "key": "book-picker-from-stats-after",
+      "page": "账本选择",
+      "state": "dailyAfter",
+      "theme": "light",
+      "destination": "统计"
+    },
+    {
+      "key": "travel-stats",
+      "page": "旅行统计",
+      "state": "travel",
+      "theme": "light"
+    },
+    {
+      "key": "all-stats",
+      "page": "全部账本统计",
+      "state": "allBefore",
+      "theme": "light"
+    },
+    {
+      "key": "all-stats-after",
+      "page": "全部账本统计",
+      "state": "allAfter",
+      "theme": "light"
+    },
+    {
+      "key": "home-dark-after",
+      "page": "明细",
+      "state": "dailyAfter",
+      "theme": "dark"
+    },
+    {
+      "key": "stats-dark-after",
+      "page": "统计",
+      "state": "dailyAfter",
+      "theme": "dark"
+    }
+  ],
+  "contextVariantPolicy": "已按来源页面、数据集、保存状态与主题建立变体；实际53个画框见 figma.frames。未建模入口与实际设备能力见交接说明。",
+  "flowRules": [
+    "主流程从 home-before 开始，预置录入 entry-ready 保存到 home-after，统计到 stats-after。",
+    "保存后数据不能通过返回或主题切换意外回退到保存前；所需上下文变体在落图时补齐。",
+    "餐饮下钻显示三笔与 632.50 合计，隐藏预算；返回保留保存后状态。",
+    "账本选择后的页面保持当前目的地及期间；全部账本记账前必须选择实际账本。",
+    "首次空态独立入口，保存后仅有一条新支出，不能跳到预置的完整账本。",
+    "金额错误不入账；返回确认提供继续编辑与放弃。",
+    "含记录账本不得表现为一键删除；管理操作按已实现的原型状态明确交互范围。",
+    "10月16日趋势包含负净支出 -60.00，保留零线和负方向。",
+    "原生页面仅模拟导航与预设状态，真实设备和数据能力留给后续实现验证。"
+  ],
+  "figma": {
+    "fileKey": "nqzjEWDhWv99gd92JiAxQK",
+    "designUrl": "https://www.figma.com/design/nqzjEWDhWv99gd92JiAxQK",
+    "prototypeUrl": "https://www.figma.com/proto/nqzjEWDhWv99gd92JiAxQK?node-id=6-456&starting-point-node-id=6%3A456",
+    "pages": {
+      "screens": "0:1",
+      "components": "4:73"
+    },
+    "screenStateCount": 53,
+    "explicitPrototypeLinks": 137,
+    "localVariableCount": 61,
+    "textStyleCount": 6,
+    "frames": [
+      {
+        "id": "6:456",
+        "key": "home-before",
+        "name": "home-before · 明细 / 日常",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "6:625",
+        "key": "entry-ready",
+        "name": "entry-ready · 记一笔",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "9:115",
+        "key": "stats-before",
+        "name": "stats-before · 统计",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "9:255",
+        "key": "book-picker",
+        "name": "book-picker · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:143",
+        "key": "home-after",
+        "name": "home-after · 明细 / 日常",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:322",
+        "key": "stats-after",
+        "name": "stats-after · 统计",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:464",
+        "key": "book-management",
+        "name": "book-management · 管理账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:486",
+        "key": "food-detail-after",
+        "name": "food-detail-after · 餐饮明细",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:537",
+        "key": "entry-error",
+        "name": "entry-error · 记一笔",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:621",
+        "key": "discard-confirmation",
+        "name": "discard-confirmation · 放弃修改确认",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:638",
+        "key": "first-entry-empty",
+        "name": "first-entry-empty · 明细 / 日常",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:690",
+        "key": "first-entry-ready",
+        "name": "first-entry-ready · 记一笔",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:772",
+        "key": "first-entry-after",
+        "name": "first-entry-after · 明细 / 日常",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:845",
+        "key": "home-dark",
+        "name": "home-dark · 明细 / 日常",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:1011",
+        "key": "entry-dark",
+        "name": "entry-dark · 记一笔",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:1093",
+        "key": "stats-dark",
+        "name": "stats-dark · 统计",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:1232",
+        "key": "book-picker-dark",
+        "name": "book-picker-dark · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:1271",
+        "key": "home-dark-after",
+        "name": "home-dark-after · 明细 / 日常",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:1449",
+        "key": "stats-dark-after",
+        "name": "stats-dark-after · 统计",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:1591",
+        "key": "travel-home",
+        "name": "travel-home · 明细 / 旅行",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:1675",
+        "key": "all-home",
+        "name": "all-home · 明细 / 全部账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:1857",
+        "key": "all-home-after",
+        "name": "all-home-after · 明细 / 全部账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:2051",
+        "key": "travel-stats",
+        "name": "travel-stats · 统计",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:2156",
+        "key": "all-stats",
+        "name": "all-stats · 统计",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "10:2300",
+        "key": "all-stats-after",
+        "name": "all-stats-after · 统计",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:875",
+        "key": "entry-from-stats",
+        "name": "entry-from-stats · 记一笔",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:958",
+        "key": "book-picker-after",
+        "name": "book-picker-after · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:997",
+        "key": "book-picker-from-stats",
+        "name": "book-picker-from-stats · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:1036",
+        "key": "book-picker-from-stats-after",
+        "name": "book-picker-from-stats-after · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:1075",
+        "key": "home-large-type",
+        "name": "home-large-type · 明细 / 200% 字号",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:1159",
+        "key": "entry-large-type",
+        "name": "entry-large-type · 记账 / 200% 字号",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:1194",
+        "key": "entry-keyboard",
+        "name": "entry-keyboard · 记一笔",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:1305",
+        "key": "home-360",
+        "name": "home-360 · 明细 / 日常",
+        "width": 360,
+        "height": 844
+      },
+      {
+        "id": "11:1471",
+        "key": "entry-360",
+        "name": "entry-360 · 记一笔",
+        "width": 360,
+        "height": 844
+      },
+      {
+        "id": "11:1553",
+        "key": "settings-before",
+        "name": "settings-before · 设置 / 首批范围",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:1603",
+        "key": "settings-after",
+        "name": "settings-after · 设置 / 首批范围",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:1653",
+        "key": "book-picker-dark-after",
+        "name": "book-picker-dark-after · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "11:1692",
+        "key": "discard-dark",
+        "name": "discard-dark · 放弃修改确认",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "12:1091",
+        "key": "food-detail-before",
+        "name": "food-detail-before · 餐饮明细",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "12:1131",
+        "key": "discard-stats",
+        "name": "discard-stats · 放弃修改确认",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "12:1149",
+        "key": "discard-empty",
+        "name": "discard-empty · 放弃修改确认",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "12:1166",
+        "key": "entry-dark-from-stats",
+        "name": "entry-dark-from-stats · 记一笔",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "12:1248",
+        "key": "travel-home-after",
+        "name": "travel-home-after · 明细 / 旅行",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "12:1332",
+        "key": "travel-stats-after",
+        "name": "travel-stats-after · 统计",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "12:1437",
+        "key": "discard-dark-stats",
+        "name": "discard-dark-stats · 放弃修改确认",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "13:1235",
+        "key": "book-picker-selected-travel",
+        "name": "book-picker-selected-travel · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "13:1278",
+        "key": "book-picker-selected-all",
+        "name": "book-picker-selected-all · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "13:1321",
+        "key": "book-picker-after-selected-travel",
+        "name": "book-picker-after-selected-travel · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "13:1364",
+        "key": "book-picker-after-selected-all",
+        "name": "book-picker-after-selected-all · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "13:1407",
+        "key": "book-picker-from-stats-selected-travel",
+        "name": "book-picker-from-stats-selected-travel · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "13:1450",
+        "key": "book-picker-from-stats-selected-all",
+        "name": "book-picker-from-stats-selected-all · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "13:1493",
+        "key": "book-picker-from-stats-after-selected-travel",
+        "name": "book-picker-from-stats-after-selected-travel · 选择账本",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "id": "13:1536",
+        "key": "book-picker-from-stats-after-selected-all",
+        "name": "book-picker-from-stats-after-selected-all · 选择账本",
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "flowStartingPoints": [
+      {
+        "nodeId": "6:456",
+        "name": "主流程 · 记录午餐"
+      },
+      {
+        "nodeId": "10:638",
+        "name": "首次记账 · 空态"
+      },
+      {
+        "nodeId": "10:845",
+        "name": "深色 · 核心流程"
+      },
+      {
+        "nodeId": "10:537",
+        "name": "金额校验"
+      },
+      {
+        "nodeId": "11:1075",
+        "name": "200% 字号样张"
+      },
+      {
+        "nodeId": "11:1305",
+        "name": "360 宽样张"
+      }
+    ],
+    "nativeTextNodes": 1350,
+    "imageFills": 0,
+    "verifiedAt": "2026-10-18"
+  },
+  "prototypeLinks": [
+    {
+      "source": "6:612",
+      "sourceKey": "home-before/stats",
+      "target": "9:115",
+      "targetKey": "stats-before"
+    },
+    {
+      "source": "9:236",
+      "sourceKey": "stats-before/home",
+      "target": "6:456",
+      "targetKey": "home-before"
+    },
+    {
+      "source": "6:462",
+      "sourceKey": "home-before/book",
+      "target": "9:255",
+      "targetKey": "book-picker"
+    },
+    {
+      "source": "9:121",
+      "sourceKey": "stats-before/book",
+      "target": "11:997",
+      "targetKey": "book-picker-from-stats"
+    },
+    {
+      "source": "6:618",
+      "sourceKey": "home-before/settings",
+      "target": "11:1553",
+      "targetKey": "settings-before"
+    },
+    {
+      "source": "9:248",
+      "sourceKey": "stats-before/settings",
+      "target": "11:1553",
+      "targetKey": "settings-before"
+    },
+    {
+      "source": "11:1584",
+      "sourceKey": "settings-before/home",
+      "target": "6:456",
+      "targetKey": "home-before"
+    },
+    {
+      "source": "11:1590",
+      "sourceKey": "settings-before/stats",
+      "target": "9:115",
+      "targetKey": "stats-before"
+    },
+    {
+      "source": "10:309",
+      "sourceKey": "home-after/stats",
+      "target": "10:322",
+      "targetKey": "stats-after"
+    },
+    {
+      "source": "10:445",
+      "sourceKey": "stats-after/home",
+      "target": "10:143",
+      "targetKey": "home-after"
+    },
+    {
+      "source": "10:149",
+      "sourceKey": "home-after/book",
+      "target": "11:958",
+      "targetKey": "book-picker-after"
+    },
+    {
+      "source": "10:328",
+      "sourceKey": "stats-after/book",
+      "target": "11:1036",
+      "targetKey": "book-picker-from-stats-after"
+    },
+    {
+      "source": "10:315",
+      "sourceKey": "home-after/settings",
+      "target": "11:1603",
+      "targetKey": "settings-after"
+    },
+    {
+      "source": "10:457",
+      "sourceKey": "stats-after/settings",
+      "target": "11:1603",
+      "targetKey": "settings-after"
+    },
+    {
+      "source": "11:1634",
+      "sourceKey": "settings-after/home",
+      "target": "10:143",
+      "targetKey": "home-after"
+    },
+    {
+      "source": "11:1640",
+      "sourceKey": "settings-after/stats",
+      "target": "10:322",
+      "targetKey": "stats-after"
+    },
+    {
+      "source": "10:1662",
+      "sourceKey": "travel-home/stats",
+      "target": "10:2051",
+      "targetKey": "travel-stats"
+    },
+    {
+      "source": "10:2137",
+      "sourceKey": "travel-stats/home",
+      "target": "10:1591",
+      "targetKey": "travel-home"
+    },
+    {
+      "source": "10:1597",
+      "sourceKey": "travel-home/book",
+      "target": "13:1235",
+      "targetKey": "book-picker-selected-travel"
+    },
+    {
+      "source": "10:2057",
+      "sourceKey": "travel-stats/book",
+      "target": "13:1407",
+      "targetKey": "book-picker-from-stats-selected-travel"
+    },
+    {
+      "source": "12:1319",
+      "sourceKey": "travel-home-after/stats",
+      "target": "12:1332",
+      "targetKey": "travel-stats-after"
+    },
+    {
+      "source": "12:1418",
+      "sourceKey": "travel-stats-after/home",
+      "target": "12:1248",
+      "targetKey": "travel-home-after"
+    },
+    {
+      "source": "12:1254",
+      "sourceKey": "travel-home-after/book",
+      "target": "13:1321",
+      "targetKey": "book-picker-after-selected-travel"
+    },
+    {
+      "source": "12:1338",
+      "sourceKey": "travel-stats-after/book",
+      "target": "13:1493",
+      "targetKey": "book-picker-from-stats-after-selected-travel"
+    },
+    {
+      "source": "10:1844",
+      "sourceKey": "all-home/stats",
+      "target": "10:2156",
+      "targetKey": "all-stats"
+    },
+    {
+      "source": "10:2281",
+      "sourceKey": "all-stats/home",
+      "target": "10:1675",
+      "targetKey": "all-home"
+    },
+    {
+      "source": "10:1681",
+      "sourceKey": "all-home/book",
+      "target": "13:1278",
+      "targetKey": "book-picker-selected-all"
+    },
+    {
+      "source": "10:2162",
+      "sourceKey": "all-stats/book",
+      "target": "13:1450",
+      "targetKey": "book-picker-from-stats-selected-all"
+    },
+    {
+      "source": "10:2038",
+      "sourceKey": "all-home-after/stats",
+      "target": "10:2300",
+      "targetKey": "all-stats-after"
+    },
+    {
+      "source": "10:2428",
+      "sourceKey": "all-stats-after/home",
+      "target": "10:1857",
+      "targetKey": "all-home-after"
+    },
+    {
+      "source": "10:1863",
+      "sourceKey": "all-home-after/book",
+      "target": "13:1364",
+      "targetKey": "book-picker-after-selected-all"
+    },
+    {
+      "source": "10:2306",
+      "sourceKey": "all-stats-after/book",
+      "target": "13:1536",
+      "targetKey": "book-picker-from-stats-after-selected-all"
+    },
+    {
+      "source": "6:598",
+      "sourceKey": "home-before/add",
+      "target": "6:625",
+      "targetKey": "entry-ready"
+    },
+    {
+      "source": "9:228",
+      "sourceKey": "stats-before/add",
+      "target": "11:875",
+      "targetKey": "entry-from-stats"
+    },
+    {
+      "source": "6:701",
+      "sourceKey": "entry-ready/save",
+      "target": "10:143",
+      "targetKey": "home-after"
+    },
+    {
+      "source": "6:631",
+      "sourceKey": "entry-ready/back",
+      "target": "10:621",
+      "targetKey": "discard-confirmation"
+    },
+    {
+      "source": "11:951",
+      "sourceKey": "entry-from-stats/save",
+      "target": "10:322",
+      "targetKey": "stats-after"
+    },
+    {
+      "source": "11:881",
+      "sourceKey": "entry-from-stats/back",
+      "target": "12:1131",
+      "targetKey": "discard-stats"
+    },
+    {
+      "source": "10:766",
+      "sourceKey": "first-entry-ready/save",
+      "target": "10:772",
+      "targetKey": "first-entry-after"
+    },
+    {
+      "source": "10:696",
+      "sourceKey": "first-entry-ready/back",
+      "target": "12:1149",
+      "targetKey": "discard-empty"
+    },
+    {
+      "source": "10:1087",
+      "sourceKey": "entry-dark/save",
+      "target": "10:1271",
+      "targetKey": "home-dark-after"
+    },
+    {
+      "source": "10:1017",
+      "sourceKey": "entry-dark/back",
+      "target": "11:1692",
+      "targetKey": "discard-dark"
+    },
+    {
+      "source": "12:1242",
+      "sourceKey": "entry-dark-from-stats/save",
+      "target": "10:1449",
+      "targetKey": "stats-dark-after"
+    },
+    {
+      "source": "12:1172",
+      "sourceKey": "entry-dark-from-stats/back",
+      "target": "12:1437",
+      "targetKey": "discard-dark-stats"
+    },
+    {
+      "source": "11:1270",
+      "sourceKey": "entry-keyboard/save",
+      "target": "10:143",
+      "targetKey": "home-after"
+    },
+    {
+      "source": "11:1200",
+      "sourceKey": "entry-keyboard/back",
+      "target": "10:621",
+      "targetKey": "discard-confirmation"
+    },
+    {
+      "source": "10:630",
+      "sourceKey": "discard-confirmation/continue",
+      "back": true
+    },
+    {
+      "source": "10:636",
+      "sourceKey": "discard-confirmation/discard",
+      "target": "6:456",
+      "targetKey": "home-before"
+    },
+    {
+      "source": "12:1140",
+      "sourceKey": "discard-stats/continue",
+      "back": true
+    },
+    {
+      "source": "12:1147",
+      "sourceKey": "discard-stats/discard",
+      "target": "9:115",
+      "targetKey": "stats-before"
+    },
+    {
+      "source": "12:1158",
+      "sourceKey": "discard-empty/continue",
+      "back": true
+    },
+    {
+      "source": "12:1164",
+      "sourceKey": "discard-empty/discard",
+      "target": "10:638",
+      "targetKey": "first-entry-empty"
+    },
+    {
+      "source": "11:1701",
+      "sourceKey": "discard-dark/continue",
+      "back": true
+    },
+    {
+      "source": "11:1707",
+      "sourceKey": "discard-dark/discard",
+      "target": "10:845",
+      "targetKey": "home-dark"
+    },
+    {
+      "source": "12:1446",
+      "sourceKey": "discard-dark-stats/continue",
+      "back": true
+    },
+    {
+      "source": "12:1452",
+      "sourceKey": "discard-dark-stats/discard",
+      "target": "10:1093",
+      "targetKey": "stats-dark"
+    },
+    {
+      "source": "10:664",
+      "sourceKey": "first-entry-empty/add",
+      "target": "10:690",
+      "targetKey": "first-entry-ready"
+    },
+    {
+      "source": "10:564",
+      "sourceKey": "entry-error/fix",
+      "target": "6:625",
+      "targetKey": "entry-ready"
+    },
+    {
+      "source": "10:543",
+      "sourceKey": "entry-error/back",
+      "target": "10:621",
+      "targetKey": "discard-confirmation"
+    },
+    {
+      "source": "9:269",
+      "sourceKey": "book-picker/daily",
+      "target": "6:456",
+      "targetKey": "home-before"
+    },
+    {
+      "source": "9:278",
+      "sourceKey": "book-picker/travel",
+      "target": "10:1591",
+      "targetKey": "travel-home"
+    },
+    {
+      "source": "9:285",
+      "sourceKey": "book-picker/all",
+      "target": "10:1675",
+      "targetKey": "all-home"
+    },
+    {
+      "source": "9:261",
+      "sourceKey": "book-picker/back",
+      "back": true
+    },
+    {
+      "source": "9:292",
+      "sourceKey": "book-picker/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "11:972",
+      "sourceKey": "book-picker-after/daily",
+      "target": "10:143",
+      "targetKey": "home-after"
+    },
+    {
+      "source": "11:981",
+      "sourceKey": "book-picker-after/travel",
+      "target": "12:1248",
+      "targetKey": "travel-home-after"
+    },
+    {
+      "source": "11:988",
+      "sourceKey": "book-picker-after/all",
+      "target": "10:1857",
+      "targetKey": "all-home-after"
+    },
+    {
+      "source": "11:964",
+      "sourceKey": "book-picker-after/back",
+      "back": true
+    },
+    {
+      "source": "11:995",
+      "sourceKey": "book-picker-after/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "11:1011",
+      "sourceKey": "book-picker-from-stats/daily",
+      "target": "9:115",
+      "targetKey": "stats-before"
+    },
+    {
+      "source": "11:1020",
+      "sourceKey": "book-picker-from-stats/travel",
+      "target": "10:2051",
+      "targetKey": "travel-stats"
+    },
+    {
+      "source": "11:1027",
+      "sourceKey": "book-picker-from-stats/all",
+      "target": "10:2156",
+      "targetKey": "all-stats"
+    },
+    {
+      "source": "11:1003",
+      "sourceKey": "book-picker-from-stats/back",
+      "back": true
+    },
+    {
+      "source": "11:1034",
+      "sourceKey": "book-picker-from-stats/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "11:1050",
+      "sourceKey": "book-picker-from-stats-after/daily",
+      "target": "10:322",
+      "targetKey": "stats-after"
+    },
+    {
+      "source": "11:1059",
+      "sourceKey": "book-picker-from-stats-after/travel",
+      "target": "12:1332",
+      "targetKey": "travel-stats-after"
+    },
+    {
+      "source": "11:1066",
+      "sourceKey": "book-picker-from-stats-after/all",
+      "target": "10:2300",
+      "targetKey": "all-stats-after"
+    },
+    {
+      "source": "11:1042",
+      "sourceKey": "book-picker-from-stats-after/back",
+      "back": true
+    },
+    {
+      "source": "11:1073",
+      "sourceKey": "book-picker-from-stats-after/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "10:470",
+      "sourceKey": "book-management/back",
+      "back": true
+    },
+    {
+      "source": "12:1097",
+      "sourceKey": "food-detail-before/back",
+      "back": true
+    },
+    {
+      "source": "10:492",
+      "sourceKey": "food-detail-after/back",
+      "back": true
+    },
+    {
+      "source": "9:141",
+      "sourceKey": "stats-before/category/餐饮",
+      "target": "12:1091",
+      "targetKey": "food-detail-before"
+    },
+    {
+      "source": "10:348",
+      "sourceKey": "stats-after/category/餐饮",
+      "target": "10:486",
+      "targetKey": "food-detail-after"
+    },
+    {
+      "source": "10:998",
+      "sourceKey": "home-dark/stats",
+      "target": "10:1093",
+      "targetKey": "stats-dark"
+    },
+    {
+      "source": "10:1213",
+      "sourceKey": "stats-dark/home",
+      "target": "10:845",
+      "targetKey": "home-dark"
+    },
+    {
+      "source": "10:851",
+      "sourceKey": "home-dark/book",
+      "target": "10:1232",
+      "targetKey": "book-picker-dark"
+    },
+    {
+      "source": "10:1246",
+      "sourceKey": "book-picker-dark/daily",
+      "target": "10:845",
+      "targetKey": "home-dark"
+    },
+    {
+      "source": "10:1238",
+      "sourceKey": "book-picker-dark/back",
+      "back": true
+    },
+    {
+      "source": "10:1436",
+      "sourceKey": "home-dark-after/stats",
+      "target": "10:1449",
+      "targetKey": "stats-dark-after"
+    },
+    {
+      "source": "10:1572",
+      "sourceKey": "stats-dark-after/home",
+      "target": "10:1271",
+      "targetKey": "home-dark-after"
+    },
+    {
+      "source": "10:1277",
+      "sourceKey": "home-dark-after/book",
+      "target": "11:1653",
+      "targetKey": "book-picker-dark-after"
+    },
+    {
+      "source": "11:1667",
+      "sourceKey": "book-picker-dark-after/daily",
+      "target": "10:1271",
+      "targetKey": "home-dark-after"
+    },
+    {
+      "source": "11:1659",
+      "sourceKey": "book-picker-dark-after/back",
+      "back": true
+    },
+    {
+      "source": "10:985",
+      "sourceKey": "home-dark/add",
+      "target": "10:1011",
+      "targetKey": "entry-dark"
+    },
+    {
+      "source": "10:1206",
+      "sourceKey": "stats-dark/add",
+      "target": "12:1166",
+      "targetKey": "entry-dark-from-stats"
+    },
+    {
+      "source": "13:1248",
+      "sourceKey": "book-picker-selected-travel/daily",
+      "target": "6:456",
+      "targetKey": "home-before"
+    },
+    {
+      "source": "13:1254",
+      "sourceKey": "book-picker-selected-travel/travel",
+      "target": "10:1591",
+      "targetKey": "travel-home"
+    },
+    {
+      "source": "13:1260",
+      "sourceKey": "book-picker-selected-travel/all",
+      "target": "10:1675",
+      "targetKey": "all-home"
+    },
+    {
+      "source": "13:1241",
+      "sourceKey": "book-picker-selected-travel/back",
+      "back": true
+    },
+    {
+      "source": "13:1266",
+      "sourceKey": "book-picker-selected-travel/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "13:1291",
+      "sourceKey": "book-picker-selected-all/daily",
+      "target": "6:456",
+      "targetKey": "home-before"
+    },
+    {
+      "source": "13:1297",
+      "sourceKey": "book-picker-selected-all/travel",
+      "target": "10:1591",
+      "targetKey": "travel-home"
+    },
+    {
+      "source": "13:1303",
+      "sourceKey": "book-picker-selected-all/all",
+      "target": "10:1675",
+      "targetKey": "all-home"
+    },
+    {
+      "source": "13:1284",
+      "sourceKey": "book-picker-selected-all/back",
+      "back": true
+    },
+    {
+      "source": "13:1309",
+      "sourceKey": "book-picker-selected-all/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "13:1334",
+      "sourceKey": "book-picker-after-selected-travel/daily",
+      "target": "10:143",
+      "targetKey": "home-after"
+    },
+    {
+      "source": "13:1340",
+      "sourceKey": "book-picker-after-selected-travel/travel",
+      "target": "12:1248",
+      "targetKey": "travel-home-after"
+    },
+    {
+      "source": "13:1346",
+      "sourceKey": "book-picker-after-selected-travel/all",
+      "target": "10:1857",
+      "targetKey": "all-home-after"
+    },
+    {
+      "source": "13:1327",
+      "sourceKey": "book-picker-after-selected-travel/back",
+      "back": true
+    },
+    {
+      "source": "13:1352",
+      "sourceKey": "book-picker-after-selected-travel/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "13:1377",
+      "sourceKey": "book-picker-after-selected-all/daily",
+      "target": "10:143",
+      "targetKey": "home-after"
+    },
+    {
+      "source": "13:1383",
+      "sourceKey": "book-picker-after-selected-all/travel",
+      "target": "12:1248",
+      "targetKey": "travel-home-after"
+    },
+    {
+      "source": "13:1389",
+      "sourceKey": "book-picker-after-selected-all/all",
+      "target": "10:1857",
+      "targetKey": "all-home-after"
+    },
+    {
+      "source": "13:1370",
+      "sourceKey": "book-picker-after-selected-all/back",
+      "back": true
+    },
+    {
+      "source": "13:1395",
+      "sourceKey": "book-picker-after-selected-all/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "13:1420",
+      "sourceKey": "book-picker-from-stats-selected-travel/daily",
+      "target": "9:115",
+      "targetKey": "stats-before"
+    },
+    {
+      "source": "13:1426",
+      "sourceKey": "book-picker-from-stats-selected-travel/travel",
+      "target": "10:2051",
+      "targetKey": "travel-stats"
+    },
+    {
+      "source": "13:1432",
+      "sourceKey": "book-picker-from-stats-selected-travel/all",
+      "target": "10:2156",
+      "targetKey": "all-stats"
+    },
+    {
+      "source": "13:1413",
+      "sourceKey": "book-picker-from-stats-selected-travel/back",
+      "back": true
+    },
+    {
+      "source": "13:1438",
+      "sourceKey": "book-picker-from-stats-selected-travel/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "13:1463",
+      "sourceKey": "book-picker-from-stats-selected-all/daily",
+      "target": "9:115",
+      "targetKey": "stats-before"
+    },
+    {
+      "source": "13:1469",
+      "sourceKey": "book-picker-from-stats-selected-all/travel",
+      "target": "10:2051",
+      "targetKey": "travel-stats"
+    },
+    {
+      "source": "13:1475",
+      "sourceKey": "book-picker-from-stats-selected-all/all",
+      "target": "10:2156",
+      "targetKey": "all-stats"
+    },
+    {
+      "source": "13:1456",
+      "sourceKey": "book-picker-from-stats-selected-all/back",
+      "back": true
+    },
+    {
+      "source": "13:1481",
+      "sourceKey": "book-picker-from-stats-selected-all/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "13:1506",
+      "sourceKey": "book-picker-from-stats-after-selected-travel/daily",
+      "target": "10:322",
+      "targetKey": "stats-after"
+    },
+    {
+      "source": "13:1512",
+      "sourceKey": "book-picker-from-stats-after-selected-travel/travel",
+      "target": "12:1332",
+      "targetKey": "travel-stats-after"
+    },
+    {
+      "source": "13:1518",
+      "sourceKey": "book-picker-from-stats-after-selected-travel/all",
+      "target": "10:2300",
+      "targetKey": "all-stats-after"
+    },
+    {
+      "source": "13:1499",
+      "sourceKey": "book-picker-from-stats-after-selected-travel/back",
+      "back": true
+    },
+    {
+      "source": "13:1524",
+      "sourceKey": "book-picker-from-stats-after-selected-travel/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "13:1549",
+      "sourceKey": "book-picker-from-stats-after-selected-all/daily",
+      "target": "10:322",
+      "targetKey": "stats-after"
+    },
+    {
+      "source": "13:1555",
+      "sourceKey": "book-picker-from-stats-after-selected-all/travel",
+      "target": "12:1332",
+      "targetKey": "travel-stats-after"
+    },
+    {
+      "source": "13:1561",
+      "sourceKey": "book-picker-from-stats-after-selected-all/all",
+      "target": "10:2300",
+      "targetKey": "all-stats-after"
+    },
+    {
+      "source": "13:1542",
+      "sourceKey": "book-picker-from-stats-after-selected-all/back",
+      "back": true
+    },
+    {
+      "source": "13:1567",
+      "sourceKey": "book-picker-from-stats-after-selected-all/manage",
+      "target": "10:464",
+      "targetKey": "book-management"
+    },
+    {
+      "source": "6:647",
+      "sourceKey": "entry-ready/amount",
+      "target": "11:1194",
+      "targetKey": "entry-keyboard"
+    }
+  ],
+  "verificationNotes": {
+    "nativeLayers": "passed",
+    "prototypeGraph": "137-click-reactions-verified",
+    "browserPlayback": [
+      "home-before → entry-ready → home-after",
+      "home-after → stats-after → food-detail-after → stats-after",
+      "stats-after scroll: negative refund and exact daily table",
+      "stats-after → book-picker-from-stats-after → travel-stats-after"
+    ],
+    "visualFixes": [
+      "200-percent text reflow",
+      "360-width transaction layout",
+      "full-width button fills",
+      "dark transaction icon contrast",
+      "book-picker paint fallback"
+    ],
+    "pending": [
+      "real-device accessibility and landscape",
+      "all 137 links not individually played in browser"
+    ]
+  }
+}
