@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -25,7 +26,7 @@ import com.dawnyew.presentation.*
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun DawnYewApp(controller:AppController,actions:PlatformActions,lockEnabled:Boolean,captureDraft:CaptureDraftUi?=null,onBackHandlerChanged:((()->Unit)?)->Unit={},onCaptureConsumed:()->Unit={}) {
+@Composable fun DawnYewApp(controller:AppController,actions:PlatformActions,lockEnabled:Boolean,captureDraft:CaptureDraftUi?=null,utilities:UtilityPlatform,onBackHandlerChanged:((()->Unit)?)->Unit={},onCaptureConsumed:()->Unit={}) {
     val ui by controller.ui.collectAsState()
     val editor by controller.editor.collectAsState()
     val pendingOperation by controller.pendingOperation.collectAsState()
@@ -41,6 +42,7 @@ import kotlinx.coroutines.delay
     val selectedLedger=scope.ledgerIds.singleOrNull()
     val start=scope.startDate
     val end=scope.endDate
+    val toolStates=rememberSaveableStateHolder()
     val homeScroll=rememberLazyListState()
     var todayDate by remember {mutableStateOf(controller.environment.localNow().take(10))}
     LaunchedEffect(Unit) {
@@ -91,7 +93,7 @@ import kotlinx.coroutines.delay
             controller.navigate {it.copy(page="明细",tab="首页",detailsScope=value,drillReturnScope=null)}
         }
         Scaffold(
-            topBar={TopAppBar(title={
+            topBar={if(page!="尺子") TopAppBar(title={
                 if(page=="首页") TextButton(onClick={ledgerPicker=true},contentPadding=PaddingValues(horizontal=0.dp)) {
                     Text((s?.ledgers?.find {it.id==selectedLedger}?.name ?: "全部账本")+" ▾",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold)
                 } else Column {
@@ -111,7 +113,7 @@ import kotlinx.coroutines.delay
             snackbarHost={SnackbarHost(snack)},
         ) {padding->
             if(s==null) Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.Center) {CircularProgressIndicator()}
-            else Box(Modifier.fillMaxSize().padding(padding)) {
+            else Box(Modifier.fillMaxSize().then(if(page=="尺子") Modifier else Modifier.padding(padding))) {
                 when(page) {
                     "首页" -> HomePage(homePeriod,homeToday,scope,todayDate,homeScroll,onRange=::setRange,
                         onRetryPeriod={controller.loadHome(scope,todayDate,force=true)},onRetryToday={controller.loadHome(scope,todayDate,force=true)},
@@ -122,7 +124,16 @@ import kotlinx.coroutines.delay
                             val source=homeToday.snapshot?.scope
                             if(source!=null && source==todayStatisticsScope(scope,todayDate) && !homeToday.loading && homeToday.error==null) openHomeDetails(source.copy(kinds=setOf(kind)))
                         })
-                    "更多" -> Box(Modifier.fillMaxSize())
+                    "更多" -> MorePage(onOpen=::navigatePage)
+                    "调色盘","尺子","噪音测量","做个决定","石头剪刀布" -> toolStates.SaveableStateProvider(page) {
+                        when(page) {
+                            "调色盘" -> PalettePage()
+                            "尺子" -> RulerPage(utilities,::requestBack)
+                            "噪音测量" -> NoisePage(utilities)
+                            "做个决定" -> DecisionPage()
+                            "石头剪刀布" -> RockPaperScissorsPage()
+                        }
+                    }
                     "明细" -> DetailsPage(s,entryPage,scope,todayDate,detailsScroll,
                         onRange=::setRange,onMore={controller.loadEntries(scope,append=true)},onRetry={controller.loadEntries(scope,force=true)},
                         onOpen={entry->controller.navigate {it.copy(selectedEntryId=entry.id,page="账单详情")}},onCapture=actions::chooseScreenshot,

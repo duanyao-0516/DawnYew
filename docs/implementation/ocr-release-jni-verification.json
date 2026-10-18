@@ -1,7 +1,7 @@
 {
   "apk": "androidApp/build/outputs/apk/release/androidApp-release-unsigned.apk",
-  "apk_sha256": "d485b2bcdebefd013f42d1050f747844bc83a7e6ea147bab6031ede0ed97e256",
-  "mapping_sha256": "229e822596accabefdf66aaf1a56d493892bd94ae3746441f15f11d21523ea44",
+  "apk_sha256": "8ff0c4fbb200627bae1dac3ab3d507b6cc68cb1f30e079a0c14c5362e4c44841",
+  "mapping_sha256": "bb833e98be800f6678cbfb17813646869863ee62b62d40452bcaa74928e9fcf3",
   "aar_inputs": [
     {
       "file": "platform/android/libs/onnxruntime-no-telemetry-1.31.0.aar",

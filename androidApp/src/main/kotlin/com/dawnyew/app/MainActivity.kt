@@ -65,6 +65,16 @@ class MainActivity:FragmentActivity(),PlatformActions {
     private var backHandler:(()->Unit)?=null
     private val formBackCallback=object:OnBackPressedCallback(false) {override fun handleOnBackPressed() {if(unlocked && !covered)backHandler?.invoke()}}
     private val deviceLocked get()=(getSystemService(KEYGUARD_SERVICE) as KeyguardManager).isDeviceLocked
+    private var microphonePermissionPending=false
+    private val utilityPlatform:AndroidUtilityPlatform by lazy {AndroidUtilityPlatform(this,lifecycleScope,
+        canUseTools={resumed && unlocked && !covered && app.session.authorized && !deviceLocked},
+        currentPage={controller.navigation.value.page},
+        requestMicrophone={if(!microphonePermissionPending) {microphonePermissionPending=true;microphonePermission.launch(android.Manifest.permission.RECORD_AUDIO)}})}
+    private val microphonePermission:ActivityResultLauncher<String> = registerForActivityResult(ActivityResultContracts.RequestPermission()) {granted->
+        microphonePermissionPending=false
+        utilityPlatform.microphonePermissionResult(granted)
+        if(granted) controller.notify("麦克风权限已允许，请在噪音测量页点击开始")
+    }
     private var documentLauncher:ActivityResultLauncher<Intent>?=null
     private fun registerDocumentLauncher(operation:PendingExternal) {
         releaseDocumentLauncher()
@@ -113,6 +123,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         lockEnabled=app.lockStore.enabled;unlocked=app.session.authorized
         external?.takeIf {app.session.externalIsCurrent(it.lease)}?.let {retainContentForPicker=true;registerDocumentLauncher(it)}
         lifecycleScope.launch {app.sessionRevocations.collect {
+            utilityPlatform.background()
             unlocked=app.session.authorized
             if(external==null) {retainContentForPicker=false;releaseDocumentLauncher()}
             if(authAttempt?.let {attempt->!app.session.authenticationIsCurrent(attempt)}==true)cancelAuthentication()
@@ -126,7 +137,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
                 if(unlocked || retainContentForPicker) {
                     Box(if(covered || !unlocked) Modifier.clearAndSetSemantics {} else Modifier) {
                     if(startupError!=null) DawnYewTheme {Surface(Modifier.fillMaxSize()) {Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.Center) {Text(startupError!!);Button(onClick={app.initialize()}) {Text("重试读取")};Button(onClick={restoreProtectionBackup()}) {Text("验证并恢复保护副本")}}}}
-                    else DawnYewApp(controller,this@MainActivity,lockEnabled,capture,onBackHandlerChanged={handler->backHandler=handler;formBackCallback.isEnabled=handler!=null}) {capture=null}
+                    else DawnYewApp(controller,this@MainActivity,lockEnabled,capture,utilities=utilityPlatform,onBackHandlerChanged={handler->backHandler=handler;formBackCallback.isEnabled=handler!=null}) {capture=null}
                     }
                 }
                 // Material3 Surface blocks touches to siblings behind it while allowing its own unlock button.
@@ -150,15 +161,18 @@ class MainActivity:FragmentActivity(),PlatformActions {
         completeAuthentication()
         if(unlocked) {app.initialize();consumeShare()}
         continueReturnedExternal()
+        utilityPlatform.foreground()
     }
     override fun onPause() {
         resumed=false;covered=true
+        utilityPlatform.background()
         app.session.background(isChangingConfigurations);unlocked=app.session.authorized
         if(!isChangingConfigurations) fileJob?.cancel()
         restorePreviewDialog?.dismiss();restorePreviewDialog=null
         super.onPause()
     }
     override fun onDestroy() {
+        utilityPlatform.background()
         authAttempt?.let(app.session::cancelAuthentication)
         authAttempt=null;authSuccess=null;authFailure?.invoke();authFailure=null;authCompleted=false
         authentication?.cancelAuthentication();authentication=null;authRunning=false
@@ -169,7 +183,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         super.onDestroy()
     }
     override fun onNewIntent(intent:Intent) {
-        super.onNewIntent(intent);app.revokeSession();cancelAuthentication();fileJob?.cancel();unlocked=app.session.authorized
+        super.onNewIntent(intent);utilityPlatform.background();app.revokeSession();cancelAuthentication();fileJob?.cancel();unlocked=app.session.authorized
         retainContentForPicker=false;releaseDocumentLauncher()
         pendingShare=null;setIntent(intent);acceptShare(intent);if(unlocked) consumeShare()
     }
@@ -214,7 +228,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         if(!authCompleted || !resumed)return
         if(!app.session.finishAuthentication(attempt,resumed,deviceLocked)) {cancelAuthentication();return}
         val action=authSuccess;authAttempt=null;authSuccess=null;authFailure=null;authRunning=false;authCompleted=false
-        unlocked=true;covered=false;try {action?.invoke()} catch(e:Exception) {app.revokeSession();unlocked=app.session.authorized;controller.notify("认证后的操作未完成，请重试：${e.message.orEmpty().take(100)}")}
+        unlocked=true;covered=false;utilityPlatform.foreground();try {action?.invoke()} catch(e:Exception) {app.revokeSession();unlocked=app.session.authorized;controller.notify("认证后的操作未完成，请重试：${e.message.orEmpty().take(100)}")}
     }
     private fun cancelAuthentication() {
         authAttempt?.let(app.session::cancelAuthentication);authAttempt=null;authSuccess=null;authCompleted=false;authRunning=false

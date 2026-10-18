@@ -4,7 +4,7 @@
 
 ## 当前范围
 
-- 四栏导航：首页、统计、更多、我的；更多暂留空，截图记账、明细、管理与备份工具集中在我的。
+- 四栏导航：首页、统计、更多、我的；更多提供离线小工具，截图记账、明细、管理与备份工具保留在我的。
 - 首页提供账本选择、搜索、周期净花销曲线、独立今日收支及圆形加号记账。多账本与独立收支分类、连续记账、编辑、筛选和跨账本移动均保留；明细作为二级页承接账单操作。
 - 首页、统计与明细各自保留日期范围：本月、上月、今年、近 7/30 天及自定义起止日期；整月/整年前后切换按历法，自定义按同等天数平移。
 - 关联退款、成组回收站与恢复、永久清理；金额使用整数分。
@@ -12,6 +12,7 @@
 - 完整 JSON 与口令加密 `.dwybak` 备份、校验预览、整体恢复及一次保护副本。
 - 本地应用锁、后台遮盖、系统强生物识别/锁屏凭据；受控截图选择返回无需重复解锁，普通退后台及锁屏仍上锁。安全设置不随业务备份迁移。
 - 随包离线 OCR：单张 PNG/JPEG 截图 → 草稿核对 → 明确保存；不自动入账。
+- 更多工具：RGB/十六进制调色盘、可校准全屏厘米尺、麦克风声级测量、随机做决定、双人石头剪刀布。噪音仅前台主动开始后采样，不存录音；未校准显示 dBFS，参考声级计校准后显示估算 dB，不是专业声压计。尺子首次使用需以实物尺校准。
 
 **按本轮范围保留：**微信、支付宝与 DawnYew Excel 的具体模板适配器等待样本，入口明确不可导入。真实 OOXML codec、通用模板/预览及原子提交基础已实现，但不代表三类账单格式已适配。iOS 仅保留平台契约；没有 iOS 工程或兼容承诺。语音、桌面小组件、多人及资产负债不在本轮。
 
@@ -52,6 +53,6 @@ OCR 模型和自建无遥测 ORT/OpenCV AAR 随工程提供。来源、哈希、
 
 ## 验证与使用边界
 
-[实现计划](docs/superpowers/plans/2026-10-18-dawnyew-android-implementation.md)记录范围；[技术方案](docs/superpowers/specs/2026-10-18-dawnyew-technical-design.md)记录账务和协议。本次首页与导航调整见 [构建与交叉检查记录](docs/implementation/2026-10-18-home-dashboard-verification.md)。此前实际操作证据见 [最终设备验收报告](docs/implementation/2026-10-18-device-acceptance.md)与[人工验收清单](docs/implementation/manual-acceptance-checklist.md)。
+[实现计划](docs/superpowers/plans/2026-10-18-dawnyew-android-implementation.md)记录范围；[技术方案](docs/superpowers/specs/2026-10-18-dawnyew-technical-design.md)记录账务和协议。更多工具及人工校准流程见 [小工具验证记录](docs/implementation/2026-10-18-more-tools-verification.md)。首页与导航调整见 [构建与交叉检查记录](docs/implementation/2026-10-18-home-dashboard-verification.md)。此前实际操作证据见 [最终设备验收报告](docs/implementation/2026-10-18-device-acceptance.md)与[人工验收清单](docs/implementation/manual-acceptance-checklist.md)。
 
 应用锁保护入口，不等于数据库本身加密。卸载会删除本机数据；请自行保存并验证导出的备份。加密备份口令不保存，遗失无法恢复。OCR 输出必须核对，设备上的合成样例通过不代表真实支付截图准确率已经验收。

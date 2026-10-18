@@ -43,6 +43,24 @@ import androidx.compose.ui.unit.dp
             }
             "搜索" -> { drawCircle(color, 6.5f * unit, point(10.5f, 10.5f), style = stroke); line(15.5f, 15.5f, 21f, 21f) }
             "新增" -> { line(5f, 12f, 19f, 12f); line(12f, 5f, 12f, 19f) }
+            "调色盘" -> {
+                drawCircle(color, 9 * unit, point(12f, 12f), style = stroke)
+                listOf(7f to 9f, 12f to 6f, 17f to 9f, 8f to 15f).forEach { (x,y) -> drawCircle(color, 1.5f * unit, point(x,y)) }
+                drawCircle(color, 2 * unit, point(16f, 16f), style = stroke)
+            }
+            "尺子" -> {
+                drawRoundRect(color, point(6f, 2f), Size(12 * unit, 20 * unit), cornerRadius = androidx.compose.ui.geometry.CornerRadius(unit), style = stroke)
+                (5..19 step 3).forEach { y -> line(6f, y.toFloat(), if(y % 2 == 1) 12f else 10f, y.toFloat()) }
+            }
+            "噪音测量" -> { line(4f, 9f, 4f, 15f); line(8f, 5f, 8f, 19f); line(12f, 2f, 12f, 22f); line(16f, 6f, 16f, 18f); line(20f, 9f, 20f, 15f) }
+            "做个决定" -> {
+                drawRoundRect(color, point(3f, 3f), Size(18 * unit, 18 * unit), cornerRadius = androidx.compose.ui.geometry.CornerRadius(3 * unit), style = stroke)
+                listOf(7f to 7f, 17f to 7f, 12f to 12f, 7f to 17f, 17f to 17f).forEach { (x,y) -> drawCircle(color, 1.5f * unit, point(x,y)) }
+            }
+            "石头剪刀布" -> {
+                drawCircle(color, 3 * unit, point(6f, 18f), style = stroke); drawCircle(color, 3 * unit, point(18f, 18f), style = stroke)
+                line(8f, 16f, 19f, 3f); line(16f, 16f, 5f, 3f)
+            }
         }
     }
 }
