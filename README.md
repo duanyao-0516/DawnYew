@@ -5,6 +5,7 @@
 ## 当前范围
 
 - 四栏导航：首页、统计、更多、我的；更多提供离线小工具，截图记账、明细、管理与备份工具保留在我的。
+- 长按底栏「我的」打开 Debug 二级页，按账本、日期范围和条数生成测试账单；默认日常／近 30 天／100 条。测试数据参与正常统计，可按未改动批次撤销。
 - 首页提供账本选择、搜索、周期净花销曲线、独立今日收支及圆形加号记账。多账本与独立收支分类、连续记账、编辑、筛选和跨账本移动均保留；明细作为二级页承接账单操作。
 - 首页、统计与明细各自保留日期范围：本月、上月、今年、近 7/30 天及自定义起止日期；整月/整年前后切换按历法，自定义按同等天数平移。
 - 关联退款、成组回收站与恢复、永久清理；金额使用整数分。
@@ -53,6 +54,6 @@ OCR 模型和自建无遥测 ORT/OpenCV AAR 随工程提供。来源、哈希、
 
 ## 验证与使用边界
 
-[实现计划](docs/superpowers/plans/2026-10-18-dawnyew-android-implementation.md)记录范围；[技术方案](docs/superpowers/specs/2026-10-18-dawnyew-technical-design.md)记录账务和协议。更多工具及人工校准流程见 [小工具验证记录](docs/implementation/2026-10-18-more-tools-verification.md)。首页与导航调整见 [构建与交叉检查记录](docs/implementation/2026-10-18-home-dashboard-verification.md)。此前实际操作证据见 [最终设备验收报告](docs/implementation/2026-10-18-device-acceptance.md)与[人工验收清单](docs/implementation/manual-acceptance-checklist.md)。
+[实现计划](docs/superpowers/plans/2026-10-18-dawnyew-android-implementation.md)记录范围；[技术方案](docs/superpowers/specs/2026-10-18-dawnyew-technical-design.md)记录账务和协议。Debug 工具与造数验证见 [测试数据工具记录](docs/implementation/2026-10-18-debug-tools-verification.md)。更多工具及人工校准流程见 [小工具验证记录](docs/implementation/2026-10-18-more-tools-verification.md)。首页与导航调整见 [构建与交叉检查记录](docs/implementation/2026-10-18-home-dashboard-verification.md)。此前实际操作证据见 [最终设备验收报告](docs/implementation/2026-10-18-device-acceptance.md)与[人工验收清单](docs/implementation/manual-acceptance-checklist.md)。
 
 应用锁保护入口，不等于数据库本身加密。卸载会删除本机数据；请自行保存并验证导出的备份。加密备份口令不保存，遗失无法恢复。OCR 输出必须核对，设备上的合成样例通过不代表真实支付截图准确率已经验收。

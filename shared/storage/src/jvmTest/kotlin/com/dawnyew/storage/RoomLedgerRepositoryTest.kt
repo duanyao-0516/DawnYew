@@ -6,6 +6,9 @@ import com.dawnyew.core.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.nio.file.Files
 import java.text.Normalizer
 import java.util.UUID
@@ -36,6 +39,102 @@ class RoomLedgerRepositoryTest {
         val category = state.categories.first { it.direction == Direction.EXPENSE }
         return repository.execute(Command.SaveEntry(ledgerId = category.ledgerId, kind = EntryKind.EXPENSE,
             amountMinor = amount, categoryId = category.id, occurrence = "2026-10-17T12:00:00", note = "午餐"), env.id()).single()
+    }
+    private fun debugCommand(ledgerId: String, count: Int = 100): Command = Json.decodeFromString<Command>(buildJsonObject {
+        put("type", "com.dawnyew.core.Command.GenerateDebugEntries")
+        put("ledgerId", ledgerId); put("startDate", "2026-09-19"); put("endDate", "2026-10-18"); put("count", count)
+    }.toString())
+
+    @Test fun debugGenerationPersistsExactBatchAndUndoPreservesExistingEntriesAcrossReopen() = runBlocking {
+        fixture { path, repository ->
+            expense(repository)
+            val before = repository.snapshot()
+            val command = debugCommand(before.ledgers.single().id)
+            val operation = env.id()
+            val concurrent = List(2) { async { repository.execute(command, operation, before.contentVersion) } }.awaitAll()
+            assertEquals(concurrent.first(), concurrent.last())
+            val generated = repository.snapshot()
+            assertEquals(101, generated.entries.size)
+            assertEquals(100, generated.importBatches.single().count)
+            assertEquals(100, generated.importMembers.size)
+            assertEquals(before.entries, generated.entries.take(1))
+            assertEquals(before.contentVersion + 1, generated.contentVersion)
+            assertEquals(before.receipts.size + 1, generated.receipts.size)
+            repository.close()
+            val reopened = RoomLedgerRepository(createDatabase(path), env, createIfEmpty = false)
+            try {
+                reopened.initialize()
+                assertEquals(generated, reopened.snapshot())
+                reopened.execute(Command.UndoImport(concurrent.first().single()), env.id())
+                val undone = reopened.snapshot()
+                assertEquals(before.entries, undone.entries)
+                assertEquals(before.ledgers, undone.ledgers)
+                assertEquals(before.categories, undone.categories)
+                assertEquals("UNDONE", undone.importBatches.single().status)
+                BundledSQLiteDriver().open(path).use { connection ->
+                    connection.prepare("PRAGMA foreign_key_check").use { assertFalse(it.step()) }
+                }
+            } finally { reopened.close() }
+        }
+    }
+
+    @Test fun debugGenerationFailureRollsBackEntriesBatchMembersReceiptAndVersion() = runBlocking {
+        fixture { path, repository ->
+            expense(repository)
+            val before = repository.snapshot(); val operation = env.id()
+            val command = debugCommand(before.ledgers.single().id)
+            BundledSQLiteDriver().open(path).use {
+                it.execSQL("CREATE TRIGGER fail_debug_receipt BEFORE INSERT ON operation_receipts BEGIN SELECT RAISE(ABORT, 'test batch failure'); END")
+            }
+            assertFails { repository.execute(command, operation) }
+            assertEquals(before, repository.snapshot())
+            assertEquals(before, repository.state.value)
+            BundledSQLiteDriver().open(path).use { it.execSQL("DROP TRIGGER fail_debug_receipt") }
+            repository.execute(command, operation)
+            assertEquals(101, repository.snapshot().entries.size)
+            assertEquals(before.contentVersion + 1, repository.snapshot().contentVersion)
+        }
+    }
+
+    @Test fun invalidDebugInputAndModifiedBatchUndoAreAtomic() = runBlocking {
+        fixture { _, repository ->
+            expense(repository)
+            val before = repository.snapshot()
+            assertFailsWith<DomainException> { repository.execute(debugCommand(before.ledgers.single().id, 0), env.id()) }
+            assertEquals(before, repository.snapshot())
+            val batchId = repository.execute(debugCommand(before.ledgers.single().id), env.id()).single()
+            val generated = repository.snapshot(); val entry = generated.entries.last()
+            repository.execute(Command.SaveEntry(entry.id, entry.ledgerId, entry.kind, entry.amountMinor, entry.categoryId,
+                entry.occurrence, "保留用户修改", entry.revision), env.id())
+            val modified = repository.snapshot()
+            assertEquals(ErrorCode.CONFLICT, assertFailsWith<DomainException> { repository.execute(Command.UndoImport(batchId), env.id()) }.code)
+            assertEquals(modified, repository.snapshot())
+            assertEquals(modified, repository.state.value)
+        }
+    }
+
+    @Test fun debugSubmissionRecoversAfterReceiptLossAndDoesNotMisidentifyOrdinaryImports() = runBlocking {
+        fixture { _, repository ->
+            val before = repository.snapshot(); val operation = env.id()
+            val command = debugCommand(before.ledgers.single().id)
+            val ids = repository.execute(command, operation)
+            val expected = OperationOutcome(operation, "GenerateDebugEntries", ids)
+            assertEquals(expected, repository.lookupOperation(operation))
+            val withoutReceipt = repository.snapshot().copy(receipts = emptyList())
+            repository.replace(withoutReceipt)
+            assertEquals(expected, repository.lookupOperation(operation))
+            assertEquals(ids, repository.execute(command, operation, before.contentVersion))
+            assertEquals(withoutReceipt, repository.snapshot())
+            assertFailsWith<DomainException> { repository.execute(debugCommand(before.ledgers.single().id, 101), operation) }
+            repository.execute(Command.UndoImport(ids.single()), env.id())
+            repository.replace(repository.snapshot().copy(receipts = emptyList()))
+            assertEquals(expected, repository.lookupOperation(operation))
+            repository.replace(repository.snapshot().let { state ->
+                state.copy(importBatches = state.importBatches.map { it.copy(adapterId = "ordinary-file-import") })
+            })
+            assertNull(repository.lookupOperation(operation))
+            assertEquals(ErrorCode.CONFLICT, assertFailsWith<DomainException> { repository.execute(command, operation) }.code)
+        }
     }
 
     @Test fun persistsInitializationAndCommandsAcrossReopen() = runBlocking {

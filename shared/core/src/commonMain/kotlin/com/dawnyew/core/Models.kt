@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.StateFlow
     @Serializable data class SetBudget(val ledgerId: String, val yearMonth: String, val amountMinor: Long?) : Command
     @Serializable data class SetPreference(val key: String, val value: String) : Command
     @Serializable data class CommitImport(val plan: ImportPlan) : Command
+    @Serializable data class GenerateDebugEntries(val ledgerId: String, val startDate: String, val endDate: String, val count: Int) : Command
     @Serializable data class UndoImport(val batchId: String) : Command
     @Serializable data object ClearAll : Command
 }
@@ -68,6 +69,9 @@ interface LedgerRepository {
     suspend fun lookupOperation(operationId:String):OperationOutcome? {
         validateId(operationId);val data=snapshot()
         data.receipts.firstOrNull { it.operationId==operationId }?.let { return OperationOutcome(operationId,it.commandType,it.resultIds) }
+        data.importBatches.firstOrNull { it.submissionId==operationId && it.adapterId==DEBUG_BATCH_ADAPTER_ID }?.let {
+            return OperationOutcome(operationId,"GenerateDebugEntries",listOf(it.id))
+        }
         return data.entries.firstOrNull { it.creationOperationId==operationId }?.let { OperationOutcome(operationId,if(it.kind==EntryKind.REFUND) "AddRefund" else "SaveEntry",listOf(it.id)) }
     }
     suspend fun acknowledgeOperation(operationId:String) = Unit

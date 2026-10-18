@@ -60,7 +60,7 @@ internal fun dateRangeLabel(range: DateRange): String = when (range.kind) {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun DateRangeDialog(initial: DateRange, onDismiss: () -> Unit, onApply: (DateRange) -> Unit) {
+@Composable internal fun DateRangeDialog(initial: DateRange, onDismiss: () -> Unit, onApply: (DateRange) -> Unit) {
     val picker = rememberDateRangePickerState(
         initialSelectedStartDateMillis = dateToUtcMillis(initial.startDate),
         initialSelectedEndDateMillis = dateToUtcMillis(initial.endDate),

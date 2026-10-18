@@ -78,6 +78,7 @@ class DomainEngine(private val env: DomainEnvironment) {
             return Mutation(original, it.resultIds)
         }
         if (command is Command.CommitImport && original.importBatches.any { it.submissionId == command.plan.submissionId }) return commitImport(original, command.plan, env)
+        if (command is Command.GenerateDebugEntries && original.importBatches.any { it.submissionId == operationId }) return generateDebugEntries(original, command, operationId, payload, env)
         if (command is Command.UndoImport && original.importBatches.any { it.id == command.batchId && it.status == "UNDONE" }) return undoImport(original, command.batchId)
         if (expectedVersion != null && expectedVersion != original.contentVersion) conflict("数据已变化，请刷新后重试")
         var state = original
@@ -197,6 +198,7 @@ class DomainEngine(private val env: DomainEnvironment) {
                 state=state.copy(preferences=state.preferences.filterNot { it.key==command.key }+UserPreference(command.key,command.value))
             }
             is Command.CommitImport -> { val mutation = commitImport(state, command.plan, env); state = mutation.state; resultIds = mutation.resultIds }
+            is Command.GenerateDebugEntries -> { val mutation = generateDebugEntries(state, command, operationId, payload, env); state = mutation.state; resultIds = mutation.resultIds }
             is Command.UndoImport -> { val mutation = undoImport(state, command.batchId); state = mutation.state; resultIds = mutation.resultIds }
             Command.ClearAll -> state=initialState().copy(contentVersion=original.contentVersion)
         }

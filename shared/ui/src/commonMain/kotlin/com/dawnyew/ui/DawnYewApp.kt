@@ -105,7 +105,10 @@ import kotlinx.coroutines.delay
                 else if(page in listOf("统计","明细")) TextButton(onClick={searchFromHome=false;filters=true}) {Text("筛选")}
             })},
             bottomBar={if(primary) NavigationBar {listOf("首页","统计","更多","我的").forEach {title->
-                NavigationBarItem(selected=page==title,onClick={controller.navigate {it.copy(page=title,tab=title)}},icon={AppGlyph(title)},label={Text(title)})
+                if(title=="我的") MyNavigationItem(isSelected=page==title,
+                    onClick={controller.navigate {it.copy(page="我的",tab="我的")}},
+                    onOpenDebug={controller.navigate {it.copy(page="Debug",tab="我的",drillReturnScope=null)}})
+                else NavigationBarItem(selected=page==title,onClick={controller.navigate {it.copy(page=title,tab=title)}},icon={AppGlyph(title)},label={Text(title)})
             }}},
             floatingActionButton={if(page in listOf("首页","明细")) FloatingActionButton(
                 onClick={controller.beginEditor(selectedLedger)},shape=CircleShape,modifier=Modifier.size(64.dp).semantics {contentDescription="记一笔"},
@@ -155,6 +158,9 @@ import kotlinx.coroutines.delay
                                 }})
                         }
                     }
+                    "Debug" -> key(s.datasetId) { DebugPage(s,todayDate,ui.busy || pendingOperation!=null,
+                        onGenerate={ledgerId,from,to,count->controller.perform(Command.GenerateDebugEntries(ledgerId,from,to,count)) {controller.notify("已生成 $count 条测试账单")}},
+                        onUndo={batchId->controller.perform(Command.UndoImport(batchId)) {controller.notify("已撤销这批测试数据")}}) }
                     "我的" -> MyPage(s,actions,lockEnabled,onNavigate=::navigatePage,onDetails={controller.navigate {it.copy(page="明细",detailsScope=homeStatisticsScope(it.homeScope),drillReturnScope=null)}},onTheme={controller.perform(Command.SetPreference("theme",it))},onConfirm={confirm=it})
                     "记一笔" -> editor?.let {draft->key(draft.operationId) {EntryForm(s,draft,ui.busy,onChange={value->controller.changeEditor(draft.operationId,value)},onSave={keep->controller.saveEditor(keep) {if(keep) controller.notify("已保存，可以继续记账") else controller.navigate {it.copy(page=it.editorReturnPage)}}},onCapture=actions::chooseScreenshot,onRetryDuplicateCheck=controller::retryCaptureDuplicateCheck)}}
                     "账单详情" -> s.entries.find {it.id==navigation.selectedEntryId}?.let {entry->EntryDetail(s,entry,ui.busy,onEdit={controller.beginEditor(entry.ledgerId,editId=entry.id)},onRefund={controller.beginEditor(entry.ledgerId,refundParentId=entry.id)},onDelete={confirm=Confirmation("移入回收站？","原支出及当前有效退款会一起移入回收站，可在「我的」的回收站中恢复。") {controller.perform(Command.SoftDelete(entry.id)) {navigatePage("明细")}}},onMove={ledger,category->controller.perform(Command.MoveEntry(entry.id,ledger,category))})} ?: EmptyState("这笔账单已不存在","请返回明细查看最新数据")

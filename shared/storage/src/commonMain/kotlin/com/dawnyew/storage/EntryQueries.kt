@@ -89,6 +89,13 @@ internal suspend fun DawnYewDatabase.readOperationOutcome(operationId:String):Op
     return useReaderConnection { connection -> connection.deferredTransaction {
         val receipt=connection.usePrepared("SELECT payload FROM operation_receipts WHERE operationId=? LIMIT 1") { s -> s.bindText(1,operationId);if(s.step()) queryJson.decodeFromString<OperationReceipt>(s.getText(0)) else null }
         if(receipt!=null) OperationOutcome(operationId,receipt.commandType,receipt.resultIds)
-        else connection.usePrepared("SELECT id,kind FROM entries WHERE creationOperationId=? LIMIT 1") { s -> s.bindText(1,operationId);if(s.step()) OperationOutcome(operationId,if(s.getText(1)=="REFUND") "AddRefund" else "SaveEntry",listOf(s.getText(0))) else null }
+        else {
+            val batch = connection.usePrepared("SELECT payload FROM import_batches WHERE submissionId=? LIMIT 1") { s ->
+                s.bindText(1, operationId)
+                if (s.step()) queryJson.decodeFromString<ImportBatch>(s.getText(0)) else null
+            }
+            if (batch?.adapterId == DEBUG_BATCH_ADAPTER_ID) OperationOutcome(operationId, "GenerateDebugEntries", listOf(batch.id))
+            else connection.usePrepared("SELECT id,kind FROM entries WHERE creationOperationId=? LIMIT 1") { s -> s.bindText(1,operationId);if(s.step()) OperationOutcome(operationId,if(s.getText(1)=="REFUND") "AddRefund" else "SaveEntry",listOf(s.getText(0))) else null }
+        }
     } }
 }
