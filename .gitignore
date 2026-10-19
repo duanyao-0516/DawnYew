@@ -1,6 +1,7 @@
 # Gradle files
 .gradle/
 .kotlin/
+# Local caches and signing material (including release/password.txt)
 .local/
 artifacts/device/
 artifacts/releases/
@@ -34,6 +35,12 @@ render.experimental.xml
 # Keystore files
 *.jks
 *.keystore
+*.p12
+*.pfx
+# Signing credentials must stay local even if copied outside .local/
+release-signing.properties
+release-password.txt
+**/signing/**/password.txt
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json

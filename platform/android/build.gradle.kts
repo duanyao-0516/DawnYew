@@ -49,5 +49,5 @@ tasks.register<Exec>("verifyReleaseOcrJni") {
     dependsOn(":androidApp:assembleRelease")
     workingDir(rootProject.projectDir)
     commandLine("python3", "scripts/build-ocr-verify-release.py", "--report",
-        "docs/implementation/ocr-release-jni-verification.json")
+        "build/reports/ocr-release-jni-verification.json")
 }

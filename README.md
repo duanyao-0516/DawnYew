@@ -33,12 +33,13 @@
 
 ## 构建
 
-需要 JDK 17、Android SDK 37 与项目内 NDK r28c。已固定依赖和 Gradle wrapper 校验值。可通过 `DAWNYEW_JAVA_HOME`、`ANDROID_HOME` 指向现有工具链；缓存和开发签名均放 `.local/`，不修改 Git 全局配置。
+需要 JDK 17、Python 3.9+、Android SDK 37、Build Tools 35.0.0 或更新稳定版与项目内 NDK r28c。已固定依赖和 Gradle wrapper 校验值。可通过 `DAWNYEW_JAVA_HOME`、`ANDROID_HOME` 指向现有工具链；缓存和签名材料均放 `.local/`，不修改 Git 全局配置。
 
 ```sh
 ./dev.sh help                         # 查看全部命令
 ./dev.sh debug                        # Debug APK
-./dev.sh release                      # 优化 Release + OCR JNI 检查 + Lint
+./dev.sh init-release-key             # 首次创建本机正式签名密钥，已有密钥保持不变
+./dev.sh release                      # 优化 Release + OCR JNI/Lint + 签名、校验、版本命名
 ./dev.sh test                         # 共享层和 Android 平台主机测试
 ./dev.sh check                        # 完整构建与自动化检查
 ./dev.sh clean                        # 清理构建目录，保留本地缓存和密钥
@@ -46,9 +47,17 @@
 ./dev.sh debug --offline --console=plain  # 透传 Gradle 参数
 ```
 
-脚本可以从其他工作目录调用，所有构建仍定位到本项目。Debug 输出为 `androidApp/build/outputs/apk/debug/androidApp-debug.apk`；Release 输出为 `androidApp/build/outputs/apk/release/androidApp-release-unsigned.apk`，不自动签名。首次运行平台加密主机测试前，需要按[加密构建记录](docs/implementation/crypto-native-build.md)准备 `.local/crypto-work/host` 下的本机 JNI 库。
+脚本可以从其他工作目录调用，所有构建仍定位到本项目。Debug 输出为 `androidApp/build/outputs/apk/debug/androidApp-debug.apk`。`./dev.sh release` 在 OCR JNI 和 Release Lint 通过后，用独立正式密钥签名，输出 `artifacts/releases/DawnYew-v<versionName>-<ABI>.apk` 和同名 `.sha256` 校验文件，例如 `DawnYew-v0.1.0-arm64-v8a.apk`。版本号读取本次 Gradle 构建元数据，架构读取实际 APK 中的原生库；多架构以 `+` 连接。签名前对齐、签名后验证签名及 16KB ZIP 对齐，任一步失败都不替换最终 APK。
 
-测试交付包的签名、SHA-256 和实际验证结果见设备验证报告。APK/AAB、APK 签名附属文件、`artifacts/releases/`、开发私钥、缓存和设备数据均由 `.gitignore` 排除，不上传 GitHub。OCR AAR/模型、JNI `.so`、Gradle wrapper、Room schema 和测试向量属于必要构建输入，随源码保留。
+正式签名仅用于 `./dev.sh release` 的交付步骤；Gradle 的 `assembleRelease` 和 `./dev.sh check` 保留未签名中间包 `androidApp/build/outputs/apk/release/androidApp-release-unsigned.apk`，供现有检查使用。本次 OCR JNI 报告写入 `build/reports/ocr-release-jni-verification.json`，不覆盖仓库中的历史验收证据。首次运行平台加密主机测试前，需要按[加密构建记录](docs/implementation/crypto-native-build.md)准备 `.local/crypto-work/host` 下的本机 JNI 库。
+
+`release` 支持 `--offline`、`--console=plain` 等 Gradle 构建参数；`--help`、`--version`、`--dry-run`、`--task-graph` 只展示信息，不导出 APK；`--status`、`--stop` 也只执行 Gradle 管理操作。为确保检查的是本项目，禁止在 `release` 中切换 Gradle 工程或用 `-x/--exclude-task` 排除任务；这类自定义调用请使用 `./dev.sh gradle`。
+
+正式密钥及随机密码保存在 `.local/signing/release/release.keystore` 与 `.local/signing/release/password.txt`，目录权限 0700、文件权限 0600，alias 为 `dawnyew-release`。**首次初始化后，务必将整个目录私密备份到安全位置。** 后续版本和换机器时恢复同一份材料；日常构建不会创建新密钥，也不会回退到 Debug 签名。文件部分缺失、权限不正确或密码错误会停止发布。密码通过文件传给签名工具，不写入源码、命令参数或日志。
+
+发布新版本前更新 `androidApp/build.gradle.kts` 的 `versionName` 并递增 `versionCode`。同版本同架构再次运行会替换本地导出文件；已分享的正式版本应使用新的版本号。此前设备测试包使用开发签名，无法被新的正式签名直接覆盖；请先导出并验证数据备份，再自行安排迁移，构建脚本不会卸载应用或操作设备。
+
+测试交付包的签名、SHA-256 和实际验证结果见设备验证报告。APK/AAB、APK 签名附属文件、`artifacts/releases/`、签名密钥和密码、缓存和设备数据均由 `.gitignore` 排除，不提交到 Git。手动发布 GitHub Release 时只上传最终 APK 及 `.sha256`，不要上传签名目录。OCR AAR/模型、JNI `.so`、Gradle wrapper、Room schema 和测试向量属于必要构建输入，随源码保留。
 
 OCR 模型和自建无遥测 ORT/OpenCV AAR 随工程提供。来源、哈希、许可和重建命令见 [OCR 构建记录](docs/implementation/ocr-native-build.md)；libsodium JNI 见 [加密构建记录](docs/implementation/crypto-native-build.md)。所有本地原生库及最终 APK 均需检查 16KB 对齐；静态检查不等于在 16KB 真机完成加载验收。
 
