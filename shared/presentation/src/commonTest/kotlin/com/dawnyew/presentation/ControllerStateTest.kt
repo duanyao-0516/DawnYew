@@ -312,6 +312,28 @@ class ControllerStateTest {
         assertEquals("2026-10-01",stale.navigation.value.scope.startDate)
     }
 
+    @Test fun homeRangePersistsAsOnePairAndStatisticsSelectionCannotOverwriteIt()=runTest {
+        val repo=Repository(data.copy(preferences=listOf(UserPreference("lastPeriod","2026-04"))))
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        val home=controller.navigation.value.homeScope.copy(startDate="2026-09-15",endDate="2026-10-10")
+        controller.selectScope(home);runCurrent()
+        assertEquals(listOf(Command.SetPreference("lastHomeRange","2026-09-15/2026-10-10")),repo.calls.map {it.first})
+        controller.finance.openStatistics("分类统计",home)
+        controller.finance.showActivities(drillScope(home,period="2026-10").toActivityScope())
+        assertTrue(controller.finance.back());assertEquals(home,controller.finance.navigation.value.sourceStatisticsScope)
+        assertTrue(controller.finance.back());assertEquals(home,controller.navigation.value.homeScope)
+        controller.finance.selectTab("统计")
+        controller.selectScope(controller.navigation.value.statisticsScope.copy(startDate="2026-11-01",endDate="2026-11-30"));runCurrent()
+        val restored=AppController(Repository(repo.state.value!!),Environment(),backgroundScope);runCurrent()
+        assertEquals(home,restored.navigation.value.homeScope)
+        assertEquals("2026-11-01",restored.navigation.value.statisticsScope.startDate)
+        assertEquals("2026-11-30",restored.navigation.value.detailsScope.endDate)
+        assertEquals(1,repo.calls.count {(it.first as? Command.SetPreference)?.key=="lastHomeRange"})
+        val invalid=AppController(Repository(data.copy(preferences=listOf(UserPreference("lastPeriod","2026-04"),UserPreference("lastHomeRange","invalid")))),Environment(),backgroundScope);runCurrent()
+        assertEquals("2026-04-01",invalid.navigation.value.homeScope.startDate)
+        assertEquals("2026-04-30",invalid.navigation.value.homeScope.endDate)
+    }
+
     @Test fun explicitSelectionsCoalesceAndWaitForMoneyOperationAcknowledgement()=runTest {
         val repo=Repository(data.copy(ledgers=data.ledgers+Ledger("l2","旅行")));repo.gate=CompletableDeferred()
         val controller=AppController(repo,Environment(),backgroundScope);runCurrent()

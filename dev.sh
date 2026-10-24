@@ -35,7 +35,9 @@ TEST_TASKS=(
     :shared:protocol:jvmTest
     :shared:storage:jvmTest
     :shared:presentation:jvmTest
+    :shared:ui:jvmTest
     :platform:android:testDebugUnitTest
+    :androidApp:testDebugUnitTest
 )
 
 case "$COMMAND" in

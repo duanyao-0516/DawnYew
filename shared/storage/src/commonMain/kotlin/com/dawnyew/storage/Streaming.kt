@@ -14,7 +14,7 @@ interface SnapshotReader {
     val counts:Map<String,Long>
     suspend fun visit(type:String,onBatch:suspend (LedgerEntityBatch)->Unit)
 }
-internal val entityTables=linkedMapOf("ledgers" to "ledgers","categories" to "categories","entries" to "entries","deletionGroups" to "deletion_groups","budgets" to "budgets","sourceIdentities" to "source_identities","importBatches" to "import_batches","importMembers" to "import_members","preferences" to "preferences")
+internal val entityTables=linkedMapOf("ledgers" to "ledgers","categories" to "categories","entries" to "entries","deletionGroups" to "deletion_groups","budgets" to "budgets","sourceIdentities" to "source_identities","importBatches" to "import_batches","importMembers" to "import_members","preferences" to "preferences")+financialTables
 internal val streamJson=Json { encodeDefaults=true;explicitNulls=true }
 
 /** One isolated candidate transaction. FK deferral allows arbitrary input entity and row ordering. */
@@ -38,6 +38,21 @@ suspend fun writeCandidate(database:DawnYewDatabase,datasetId:String,block:suspe
                 batch.importBatches.chunked(128).forEach { dao.insertImportBatchRows(it.map { v->ImportBatchRow(v.id,v.submissionId,position("importBatches"),streamJson.encodeToString(v)) }) }
                 batch.importMembers.chunked(128).forEach { dao.insertImportMemberRows(it.map { v->ImportMemberRow(v.batchId,v.entryId,v.entryId.takeIf { v.state=="PRESENT" },v.state,position("importMembers"),streamJson.encodeToString(v)) }) }
                 batch.preferences.chunked(128).forEach { dao.insertPreferenceRows(it.map { v->PreferenceRow(v.key,position("preferences"),streamJson.encodeToString(v)) }) }
+                batch.accounts.chunked(128).forEach { dao.insertAccounts(it.map {v->accountsRow(v,position("accounts"))}) }
+                batch.entryDetails.chunked(128).forEach { dao.insertEntryDetails(it.map {v->entryDetailsRow(v,position("entryDetails"))}) }
+                batch.entryTags.chunked(128).forEach { dao.insertEntryTags(it.map {v->entryTagsRow(v,position("entryTags"))}) }
+                batch.transfers.chunked(128).forEach { dao.insertTransfers(it.map {v->transfersRow(v,position("transfers"))}) }
+                batch.dimensions.chunked(128).forEach { dao.insertDimensions(it.map {v->dimensionsRow(v,position("dimensions"))}) }
+                batch.contacts.chunked(128).forEach { dao.insertContacts(it.map {v->contactsRow(v,position("contacts"))}) }
+                batch.obligations.chunked(128).forEach { dao.insertObligations(it.map {v->obligationsRow(v,position("obligations"))}) }
+                batch.recurringPlans.chunked(128).forEach { dao.insertRecurringPlans(it.map {v->recurringPlansRow(v,position("recurringPlans"))}) }
+                batch.recurringOccurrences.chunked(128).forEach { dao.insertRecurringOccurrences(it.map {v->recurringOccurrencesRow(v,position("recurringOccurrences"))}) }
+                batch.savingsPlans.chunked(128).forEach { dao.insertSavingsPlans(it.map {v->savingsPlansRow(v,position("savingsPlans"))}) }
+                batch.savingsMovements.chunked(128).forEach { dao.insertSavingsMovements(it.map {v->savingsMovementsRow(v,position("savingsMovements"))}) }
+                batch.savingsWishes.chunked(128).forEach { dao.insertSavingsWishes(it.map {v->savingsWishesRow(v,position("savingsWishes"))}) }
+                batch.budgetAllocations.chunked(128).forEach { dao.insertBudgetAllocations(it.map {v->budgetAllocationsRow(v,position("budgetAllocations"))}) }
+                batch.budgetReallocations.chunked(128).forEach { dao.insertBudgetReallocations(it.map {v->budgetReallocationsRow(v,position("budgetReallocations"))}) }
+
             }
         }
         block(sink)
@@ -48,6 +63,7 @@ suspend fun writeCandidate(database:DawnYewDatabase,datasetId:String,block:suspe
 
 internal suspend fun validateCandidateRelations(connection:Transactor) {
     suspend fun rejectRows(sql:String,message:String) { connection.usePrepared(sql) { if(it.step()) invalid(message) } }
+    validateFinancialCandidateRelations(connection)
     rejectRows("PRAGMA foreign_key_check","候选数据存在悬空引用")
     rejectRows("SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM ledgers WHERE archived=0)","至少保留一个可用账本")
     rejectRows("SELECT 1 FROM entries r JOIN entries p ON p.id=r.parentExpenseId WHERE r.kind='REFUND' AND (p.kind!='EXPENSE' OR (r.deletionGroupId IS NULL AND (p.deletionGroupId IS NOT NULL OR r.ledgerId!=p.ledgerId OR r.categoryId!=p.categoryId OR r.occurrence<p.occurrence))) LIMIT 1","退款归属或时间无效")
@@ -67,7 +83,7 @@ suspend fun <T> DawnYewDatabase.exportSnapshot(block:suspend SnapshotReader.()->
         override val counts=counts
         override suspend fun visit(type:String,onBatch:suspend (LedgerEntityBatch)->Unit) {
             val table=entityTables[type] ?: invalid("未知备份实体")
-            val keys=when(type) { "budgets"->listOf("ledgerId","yearMonth");"importMembers"->listOf("batchId","entryId");"preferences"->listOf("key");else->listOf("id") }
+            val keys=entityKeyColumns(type)
             var cursor:List<String>?=null
             while(true) {
                 val where=if(cursor==null) "" else if(keys.size==1) " WHERE ${keys[0]}>?" else " WHERE ${keys[0]}>? OR (${keys[0]}=? AND ${keys[1]}>?)"
@@ -87,6 +103,20 @@ suspend fun <T> DawnYewDatabase.exportSnapshot(block:suspend SnapshotReader.()->
                     "importBatches"->LedgerEntityBatch(importBatches=payloads.map { streamJson.decodeFromString<ImportBatch>(it) })
                     "importMembers"->LedgerEntityBatch(importMembers=payloads.map { streamJson.decodeFromString<ImportMember>(it) })
                     "preferences"->LedgerEntityBatch(preferences=payloads.map { streamJson.decodeFromString<UserPreference>(it) })
+                    "accounts"->LedgerEntityBatch(accounts=payloads.map {streamJson.decodeFromString<Account>(it)})
+                    "entryDetails"->LedgerEntityBatch(entryDetails=payloads.map {streamJson.decodeFromString<EntryDetails>(it)})
+                    "entryTags"->LedgerEntityBatch(entryTags=payloads.map {streamJson.decodeFromString<EntryTag>(it)})
+                    "transfers"->LedgerEntityBatch(transfers=payloads.map {streamJson.decodeFromString<AccountTransfer>(it)})
+                    "dimensions"->LedgerEntityBatch(dimensions=payloads.map {streamJson.decodeFromString<Dimension>(it)})
+                    "contacts"->LedgerEntityBatch(contacts=payloads.map {streamJson.decodeFromString<Contact>(it)})
+                    "obligations"->LedgerEntityBatch(obligations=payloads.map {streamJson.decodeFromString<Obligation>(it)})
+                    "recurringPlans"->LedgerEntityBatch(recurringPlans=payloads.map {streamJson.decodeFromString<RecurringPlan>(it)})
+                    "recurringOccurrences"->LedgerEntityBatch(recurringOccurrences=payloads.map {streamJson.decodeFromString<RecurringOccurrence>(it)})
+                    "savingsPlans"->LedgerEntityBatch(savingsPlans=payloads.map {streamJson.decodeFromString<SavingsPlan>(it)})
+                    "savingsMovements"->LedgerEntityBatch(savingsMovements=payloads.map {streamJson.decodeFromString<SavingsMovement>(it)})
+                    "savingsWishes"->LedgerEntityBatch(savingsWishes=payloads.map {streamJson.decodeFromString<SavingsWish>(it)})
+                    "budgetAllocations"->LedgerEntityBatch(budgetAllocations=payloads.map {streamJson.decodeFromString<BudgetAllocation>(it)})
+                    "budgetReallocations"->LedgerEntityBatch(budgetReallocations=payloads.map {streamJson.decodeFromString<BudgetReallocation>(it)})
                     else->invalid("未知备份实体")
                 }
                 validateEntityBatch(batch);onBatch(batch);cursor=page.last().first
@@ -95,3 +125,8 @@ suspend fun <T> DawnYewDatabase.exportSnapshot(block:suspend SnapshotReader.()->
     }
     block(reader)
 } }
+
+internal fun entityKeyColumns(type:String):List<String> = when(type) {
+    "budgets"->listOf("ledgerId","yearMonth");"importMembers"->listOf("batchId","entryId");"preferences"->listOf("key")
+    "entryDetails"->listOf("entryId");"entryTags"->listOf("entryId","tagId");else->listOf("id")
+}

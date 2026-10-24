@@ -4,7 +4,7 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 
-const val CURRENT_DATABASE_VERSION = 3
+const val CURRENT_DATABASE_VERSION = 4
 
 // SQLite's stable sqlite3_open_v2 flags. Intentionally omit SQLITE_OPEN_CREATE (0x00000004).
 private const val OPEN_READONLY = 0x00000001

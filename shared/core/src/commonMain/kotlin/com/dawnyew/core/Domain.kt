@@ -4,6 +4,9 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 
 object Money {
     const val MAX = 99_999_999_999L
@@ -72,7 +75,9 @@ class DomainEngine(private val env: DomainEnvironment) {
     }
     fun apply(original: LedgerState, command: Command, operationId: String, expectedVersion: Long? = null): Mutation {
         validateId(operationId)
-        val payload = Sha256.hex(json.encodeToString(command).encodeToByteArray())
+        val encoded=json.encodeToJsonElement(command)
+        val legacyEntryCommand=command is Command.SaveEntry && command.details==null && command.tagIds==null || command is Command.AddRefund && command.details==null && command.tagIds==null
+        val payload = Sha256.hex((if(legacyEntryCommand) JsonObject(encoded.jsonObject.filterKeys { it!="details" && it!="tagIds" }) else encoded).toString().encodeToByteArray())
         original.receipts.firstOrNull { it.operationId == operationId }?.let {
             if (it.payloadDigest != payload) conflict("重复操作标识对应了不同内容")
             return Mutation(original, it.resultIds)
@@ -98,6 +103,17 @@ class DomainEngine(private val env: DomainEnvironment) {
         fun updateEntries(changes: List<Entry>) { val map = changes.associateBy { it.id }; state = state.copy(entries = state.entries.map { map[it.id] ?: it } + changes.filter { c -> state.entries.none { it.id == c.id } }) }
         fun refundSum(parent: String, excluding: String? = null): Long = state.entries.filter { it.active && it.parentExpenseId == parent && it.id != excluding }.fold(0L) { sum, e -> Money.add(sum, e.amountMinor) }
         when (command) {
+            is Command.Finance -> { val mutation=mutateFinance(state,command.action,env);state=mutation.state;resultIds=mutation.resultIds }
+            is Command.ReorderLedgers -> {
+                state=state.copy(ledgers=reorderEntities(state.ledgers,state.ledgers,command.orderedIds,command.expectedVersion,state.contentVersion,Ledger::id) {item,index->item.copy(sortOrder=index,revision=Money.add(item.revision,1))})
+                resultIds=command.orderedIds.toList()
+            }
+            is Command.ReorderCategories -> {
+                writable(command.ledgerId)
+                val members=state.categories.filter {it.ledgerId==command.ledgerId && it.direction==command.direction}
+                state=state.copy(categories=reorderEntities(state.categories,members,command.orderedIds,command.expectedVersion,state.contentVersion,Category::id) {item,index->item.copy(sortOrder=index,revision=Money.add(item.revision,1))})
+                resultIds=command.orderedIds.toList()
+            }
             is Command.CreateLedger -> {
                 val n = name(command.name, 30)
                 if (state.ledgers.any { it.name == n }) invalid("账本名称已存在")
@@ -112,9 +128,10 @@ class DomainEngine(private val env: DomainEnvironment) {
             }
             is Command.DeleteLedger -> {
                 val l = ledger(command.id)
+                if(state.accounts.any { it.ledgerId==l.id } || state.dimensions.any { it.ledgerId==l.id } || state.contacts.any { it.ledgerId==l.id } || state.obligations.any { it.ledgerId==l.id } || state.recurringPlans.any { it.ledgerId==l.id } || state.savingsPlans.any { it.ledgerId==l.id } || state.transfers.any { it.ledgerId==l.id }) invalid("账本含财务资料，请使用归档")
                 if (state.entries.any { it.ledgerId == l.id }) invalid("账本含有账单或回收站记录，请使用归档")
                 if (!l.archived && state.ledgers.count { !it.archived } == 1) invalid("不能删除最后一个可用账本")
-                state=state.copy(ledgers=state.ledgers.filterNot { it.id==l.id }, categories=state.categories.filterNot { it.ledgerId==l.id }, budgets=state.budgets.filterNot { it.ledgerId==l.id })
+                state=state.copy(ledgers=state.ledgers.filterNot { it.id==l.id }, categories=state.categories.filterNot { it.ledgerId==l.id }, budgets=state.budgets.filterNot { it.ledgerId==l.id },budgetAllocations=state.budgetAllocations.filterNot { it.ledgerId==l.id },budgetReallocations=state.budgetReallocations.filterNot { it.ledgerId==l.id })
             }
             is Command.SaveCategory -> {
                 writable(command.ledgerId); val n=name(command.name,20)
@@ -126,6 +143,7 @@ class DomainEngine(private val env: DomainEnvironment) {
             }
             is Command.DeleteCategory -> {
                 val c=state.categories.find { it.id==command.id } ?: invalid("分类不存在"); writable(c.ledgerId)
+                if(state.budgetAllocations.any { it.categoryId==c.id } || state.recurringPlans.any { it.categoryId==c.id }) invalid("分类已被预算或周期计划引用，可改为停用")
                 if (state.entries.any { it.categoryId==c.id }) invalid("已有账单引用该分类，可改为停用")
                 state=state.copy(categories=state.categories.filterNot { it.id==c.id })
             }
@@ -147,7 +165,7 @@ class DomainEngine(private val env: DomainEnvironment) {
                 val e=Entry(old?.id ?: env.id(),command.ledgerId,command.kind,command.amountMinor,command.categoryId,command.occurrence,command.note,old?.parentExpenseId,
                     revision=Money.add(old?.revision ?: 0,1),createdAt=old?.createdAt ?: now,updatedAt=now,originKind=old?.originKind ?: command.originKind,creationOperationId=old?.creationOperationId ?: operationId,
                     captureFingerprint=old?.captureFingerprint ?: command.captureFingerprint,captureEngineVersion=old?.captureEngineVersion ?: command.captureEngineVersion)
-                updateEntries(listOf(e)+active.map { it.copy(ledgerId=e.ledgerId,categoryId=e.categoryId,revision=Money.add(it.revision,1),updatedAt=now) }); resultIds=listOf(e.id)
+                updateEntries(listOf(e)+active.map { it.copy(ledgerId=e.ledgerId,categoryId=e.categoryId,revision=Money.add(it.revision,1),updatedAt=now) }); state=updateEntryAssociations(state,e.id,command.details,command.tagIds);resultIds=listOf(e.id)
             }
             is Command.AddRefund -> {
                 val parent=activeEntry(command.expenseId)
@@ -156,7 +174,7 @@ class DomainEngine(private val env: DomainEnvironment) {
                 if (command.occurrence<parent.occurrence) invalid("退款不能早于原支出")
                 if (Money.add(refundSum(parent.id),command.amountMinor)>parent.amountMinor) invalid("累计退款不能超过原支出")
                 val r=Entry(env.id(),parent.ledgerId,EntryKind.REFUND,command.amountMinor,parent.categoryId,command.occurrence,command.note,parent.id,createdAt=now,updatedAt=now,creationOperationId=operationId)
-                updateEntries(listOf(r));resultIds=listOf(r.id)
+                updateEntries(listOf(r));state=updateEntryAssociations(state,r.id,command.details,command.tagIds);resultIds=listOf(r.id)
             }
             is Command.MoveEntry -> {
                 val e=activeEntry(command.id);if(e.kind==EntryKind.REFUND) invalid("退款请随原支出移动")
@@ -183,7 +201,7 @@ class DomainEngine(private val env: DomainEnvironment) {
                 val e=entry(command.id);if(e.active) invalid("请先将账单移入回收站")
                 val ids=state.entries.filter { it.id==e.id || it.parentExpenseId==e.id }.map { it.id }.toSet()
                 if(state.entries.any { it.id in ids && it.active }) invalid("仍有关联的有效退款")
-                state=state.copy(entries=state.entries.filterNot { it.id in ids },sourceIdentities=state.sourceIdentities.filterNot { it.entryId in ids },importMembers=state.importMembers.map { if(it.entryId in ids) it.copy(state="REMOVED") else it });resultIds=ids.toList()
+                state=state.copy(entryDetails=state.entryDetails.filterNot { it.entryId in ids },entryTags=state.entryTags.filterNot { it.entryId in ids },recurringOccurrences=state.recurringOccurrences.map { if(it.entryId in ids) it.copy(entryId=null) else it },entries=state.entries.filterNot { it.id in ids },sourceIdentities=state.sourceIdentities.filterNot { it.entryId in ids },importMembers=state.importMembers.map { if(it.entryId in ids) it.copy(state="REMOVED") else it });resultIds=ids.toList()
             }
             is Command.SetBudget -> {
                 writable(command.ledgerId)
@@ -191,10 +209,11 @@ class DomainEngine(private val env: DomainEnvironment) {
                 try { LocalDate.parse(command.yearMonth+"-01") } catch(_:Exception) { invalid("月份无效") }
                 command.amountMinor?.let { Money.requireValid(it) }
                 val old=state.budgets.find { it.ledgerId==command.ledgerId && it.yearMonth==command.yearMonth }
+                if(command.amountMinor==null) state=state.copy(budgetAllocations=state.budgetAllocations.filterNot { it.ledgerId==command.ledgerId && it.yearMonth==command.yearMonth },budgetReallocations=state.budgetReallocations.filterNot { it.ledgerId==command.ledgerId && it.yearMonth==command.yearMonth })
                 state=state.copy(budgets=state.budgets.filterNot { it.ledgerId==command.ledgerId && it.yearMonth==command.yearMonth } + listOfNotNull(command.amountMinor?.let { MonthlyBudget(command.ledgerId,command.yearMonth,it,Money.add(old?.revision ?: 0,1)) }))
             }
             is Command.SetPreference -> {
-                if(command.key !in setOf("theme","lastLedgerId","lastPeriod","lastBackupAt")) invalid("不支持的偏好设置")
+                validatePreference(UserPreference(command.key,command.value))
                 state=state.copy(preferences=state.preferences.filterNot { it.key==command.key }+UserPreference(command.key,command.value))
             }
             is Command.CommitImport -> { val mutation = commitImport(state, command.plan, env); state = mutation.state; resultIds = mutation.resultIds }

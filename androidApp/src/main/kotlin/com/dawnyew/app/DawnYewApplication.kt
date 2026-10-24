@@ -16,10 +16,13 @@ import com.dawnyew.presentation.AppController
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
+import com.dawnyew.app.capture.CaptureRuntime
+import com.dawnyew.app.capture.ScreenCaptureService
 
 /** A picker continuation is process-only and contains no Activity or view references. */
 data class PendingExternal(val type: String, val lease: SessionCoordinator.Lease, val databaseEpoch: Long, val file: File? = null,
-    val password: CharArray = charArrayOf(), var returnedUri: Uri? = null, var resultReceived: Boolean = false)
+    val password: CharArray = charArrayOf(), var returnedUri: Uri? = null, var resultReceived: Boolean = false, val targetLedgerId: String? = null)
+data class PendingCaptureDelivery(val token: String, val sessionEpoch: Long)
 
 class DawnYewApplication : Application() {
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -39,18 +42,29 @@ class DawnYewApplication : Application() {
         }
     val sessionRevocations = MutableStateFlow(0L)
     val startupError = MutableStateFlow<String?>(null)
+    var pendingCapture: PendingCaptureDelivery? = null
     private var initializing = false
     private var startupStagingNeedsCleanup = false
     override fun onCreate() {
         super.onCreate(); environment = AndroidEnvironment(); lockStore = AppLockStore(this)
-        session = SessionCoordinator(SystemClock::elapsedRealtime).also { it.configureLock(lockStore.enabled) }
+        session = SessionCoordinator(SystemClock::elapsedRealtime,onRevoked={
+            if(::controller.isInitialized) {
+                controller.recurring.updateAccess(com.dawnyew.presentation.ForegroundAccess(false,session.epoch,repository.epoch))
+                controller.resetTransientState();discardExternal();sessionRevocations.value++
+            }
+        }).also { it.configureLock(lockStore.enabled) }
         // Secrets, provider leases and continuations are deliberately absent from saved state.
         val staging = File(noBackupFilesDir, "staging")
         if (staging.exists() && !staging.deleteRecursively()) {startupStagingNeedsCleanup = true;startupError.value = "上次操作的暂存文件未能清理，请重试后继续。"}
         repository = GenerationRepository(this, environment) { session.authorized }; controller = AppController(repository, environment, applicationScope)
         applicationScope.launch { repository.failureReason.collect { if (it != null) startupError.value = it } }
         ContextCompat.registerReceiver(this, object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) { if (intent?.action == Intent.ACTION_SCREEN_OFF) revokeSession() }
+            override fun onReceive(context: Context?, intent: Intent?) { if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                com.dawnyew.app.capture.CaptureActionRuntime.clear()
+                CaptureRuntime.clear(this@DawnYewApplication); pendingCapture = null
+                stopService(Intent(this@DawnYewApplication, ScreenCaptureService::class.java))
+                revokeSession()
+            } }
         }, IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED)
     }
     fun discardExternal() {
@@ -64,7 +78,7 @@ class DawnYewApplication : Application() {
         }
         pendingExternal = null
     }
-    fun revokeSession() { session.revoke(); discardExternal();sessionRevocations.value++ }
+    fun revokeSession() { session.revoke() }
     fun initialize() {
         if (initializing || (repository.state.value != null && !startupStagingNeedsCleanup)) return
         initializing = true

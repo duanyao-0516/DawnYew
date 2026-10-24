@@ -13,6 +13,13 @@ sealed interface EditorChange {
     data class Category(val value: String) : EditorChange
     data class Confirmed(val value: Boolean) : EditorChange
     data class DuplicateAcknowledged(val value: Boolean) : EditorChange
+    data class Account(val value: String?) : EditorChange
+    data class Recorded(val value: Boolean) : EditorChange
+    data class ExcludedFromBudget(val value: Boolean) : EditorChange
+    data class Reconciled(val value: Boolean) : EditorChange
+    data class Project(val value: String?) : EditorChange
+    data class Merchant(val value: String?) : EditorChange
+    data class Tags(val value: Set<String>) : EditorChange
 }
 
 /** Process-memory only. Never serialize this object into saved-state bundles or files. */
@@ -35,6 +42,13 @@ data class EditorDraft(
     val duplicateCheckError: String? = null,
     val duplicateAcknowledged: Boolean = false,
     val duplicateMessages: List<String> = emptyList(),
+    val accountId: String? = null,
+    val recorded: Boolean = true,
+    val excludedFromBudget: Boolean = false,
+    val reconciled: Boolean = false,
+    val projectId: String? = null,
+    val merchantId: String? = null,
+    val tagIds: Set<String> = emptySet(),
 ) {
     val needsDiscardConfirmation get() = dirty || capture != null
 
@@ -43,13 +57,14 @@ data class EditorDraft(
         duplicateCheckError?.let {invalid(it)}
         if (capture?.duplicateWarning == true && !duplicateAcknowledged) invalid("请核对疑似重复记录，并确认仍要保留本次账单")
         if (capture != null && !confirmed) invalid("请确认识别出的金额、日期、类型和分类")
-        val minor = Money.parse(amount)
+        val minor = AmountCalculator.evaluate(amount)
         val occurrence = date + "T" + if (time.length == 5) "$time:00" else time
         validateOccurrence(occurrence)
-        return if (refundParentId != null) Command.AddRefund(refundParentId, minor, occurrence, note)
+        val details = EntryDetails(editId.orEmpty(), accountId, recorded, if (kind == EntryKind.REFUND) false else excludedFromBudget, reconciled, projectId, merchantId)
+        return if (refundParentId != null) Command.AddRefund(refundParentId, minor, occurrence, note, details, tagIds.sorted())
         else Command.SaveEntry(editId, ledgerId ?: invalid("请选择记入的实际账本"), kind, minor,
             categoryId ?: invalid("请选择分类"), occurrence, note, expectedRevision,
-            if (capture != null) OriginKind.OCR else OriginKind.MANUAL, capture?.fingerprint, capture?.engineVersion)
+            if (capture != null) OriginKind.OCR else OriginKind.MANUAL, capture?.fingerprint, capture?.engineVersion, details, tagIds.sorted())
     }
 
     /** A continuation is a new manual operation, retaining only still-valid selections. */
@@ -59,7 +74,12 @@ data class EditorDraft(
         val nextLedger = ledgerId?.takeIf { id -> state.ledgers.any { it.id == id && !it.archived } }
         val available = state.categories.filter { it.ledgerId == nextLedger && it.enabled && it.direction == direction }
         val nextCategory = categoryId?.takeIf { id -> available.any { it.id == id } } ?: available.minWithOrNull(compareBy<Category> { it.sortOrder }.thenBy { it.id })?.id
-        return create(state, operationId, now, nextLedger).copy(kind = nextKind, categoryId = nextCategory)
+        return create(state, operationId, now, nextLedger).copy(kind = nextKind, categoryId = nextCategory,
+            accountId = accountId?.takeIf { state.writableAccount(it, nextLedger) }, recorded = recorded,
+            excludedFromBudget = excludedFromBudget, reconciled = reconciled,
+            projectId = projectId?.takeIf { state.writableDimension(it, nextLedger, DimensionKind.PROJECT) },
+            merchantId = merchantId?.takeIf { state.writableDimension(it, nextLedger, DimensionKind.MERCHANT) },
+            tagIds = tagIds.filter { state.writableDimension(it, nextLedger, DimensionKind.TAG) }.toSet())
     }
 
     companion object {
@@ -71,9 +91,22 @@ data class EditorDraft(
             val kind = existing?.kind ?: if (parent != null) EntryKind.REFUND else EntryKind.EXPENSE
             val occurrence = existing?.occurrence ?: capture?.occurrence?.takeIf { it.isNotBlank() } ?: now
             val category = existing?.categoryId ?: parent?.categoryId ?: state.categories.filter { it.ledgerId == ledger && it.enabled && it.direction == Direction.EXPENSE }.minWithOrNull(compareBy<Category> { it.sortOrder }.thenBy { it.id })?.id
+            val details = (existing ?: parent)?.let { entry -> state.entryDetails.find { it.entryId == entry.id } }
+            val defaultAccount = state.preferences.find { it.key == "defaultAccountId" }?.value?.takeIf { state.writableAccount(it, ledger) }
             return EditorDraft(operationId, ledger, kind, existing?.let { Money.format(it.amountMinor) } ?: capture?.amount.orEmpty(),
                 category, occurrence.take(10), occurrence.substringAfter('T'), existing?.note ?: capture?.note.orEmpty(),
-                existing?.id, existing?.revision, parent?.id, capture, confirmed = capture == null)
+                existing?.id, existing?.revision, parent?.id, capture, confirmed = capture == null,
+                accountId = if (existing != null) details?.accountId else details?.accountId?.takeIf { state.writableAccount(it, ledger) } ?: defaultAccount,
+                recorded = if (existing != null) details?.recorded ?: true else true,
+                excludedFromBudget = if (kind == EntryKind.REFUND) false else details?.excludedFromBudget ?: false,
+                reconciled = if (existing != null) details?.reconciled ?: false else false,
+                projectId = details?.projectId, merchantId = details?.merchantId,
+                tagIds = state.entryTags.filter { it.entryId == (existing ?: parent)?.id }.map { it.tagId }.toSet())
         }
     }
 }
+
+internal fun LedgerState.writableAccount(id: String, ledgerId: String?): Boolean =
+    accounts.any { it.id == id && it.ledgerId == ledgerId && !it.archived } && obligations.none { it.virtualAccountId == id }
+internal fun LedgerState.writableDimension(id: String, ledgerId: String?, kind: DimensionKind): Boolean =
+    dimensions.any { it.id == id && it.ledgerId == ledgerId && it.kind == kind && !it.archived }

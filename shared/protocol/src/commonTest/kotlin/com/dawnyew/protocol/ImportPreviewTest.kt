@@ -36,7 +36,7 @@ class ImportPreviewTest {
         assertIs<TemplateProbe.Unsupported>(TemplateDetection.inspect(listOf(a),facts(1),listOf("almost fixture-v1")))
         assertIs<TemplateProbe.Unsupported>(TemplateDetection.inspect(listOf(a),facts(1).copy(container=DocumentContainer.XLSX),listOf("fixture-v1")))
         assertEquals(setOf("synthetic","second"),assertIs<TemplateProbe.Ambiguous>(TemplateDetection.inspect(listOf(a,b),facts(1),listOf("fixture-v1"))).adapterIds)
-        assertTrue(TemplateRegistry.templates.all { it.availability==TemplateAvailability.AWAITING_SPECIFICATION })
+        assertTrue(TemplateRegistry.templates.filter { it.id!=DAWNYEW_CSV_ADAPTER_ID }.all { it.availability==TemplateAvailability.AWAITING_SPECIFICATION })
     }
     @Test fun everyPhysicalRowIsCountedAndUnresolvedSelectedRowsBlockCommit() {
         val adapter=SyntheticAdapter();val rows=listOf("header","entry","decision","bad","footer").mapIndexed { i,value->adapter.parseRow(listOf(value),i+1) }

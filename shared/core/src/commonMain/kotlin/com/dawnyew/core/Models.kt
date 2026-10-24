@@ -30,16 +30,24 @@ import kotlinx.coroutines.flow.StateFlow
     val budgets: List<MonthlyBudget> = emptyList(), val sourceIdentities: List<SourceIdentity> = emptyList(),
     val importBatches: List<ImportBatch> = emptyList(), val importMembers: List<ImportMember> = emptyList(),
     val preferences: List<UserPreference> = emptyList(), val receipts: List<OperationReceipt> = emptyList(),
+    val accounts:List<Account> = emptyList(), val entryDetails:List<EntryDetails> = emptyList(), val entryTags:List<EntryTag> = emptyList(),
+    val transfers:List<AccountTransfer> = emptyList(), val dimensions:List<Dimension> = emptyList(), val contacts:List<Contact> = emptyList(),
+    val obligations:List<Obligation> = emptyList(), val recurringPlans:List<RecurringPlan> = emptyList(), val recurringOccurrences:List<RecurringOccurrence> = emptyList(),
+    val savingsPlans:List<SavingsPlan> = emptyList(), val savingsMovements:List<SavingsMovement> = emptyList(), val savingsWishes:List<SavingsWish> = emptyList(),
+    val budgetAllocations:List<BudgetAllocation> = emptyList(), val budgetReallocations:List<BudgetReallocation> = emptyList(),
 )
 
 @Serializable sealed interface Command {
+    @Serializable data class Finance(val action:FinanceAction):Command
     @Serializable data class CreateLedger(val name: String) : Command
     @Serializable data class UpdateLedger(val id: String, val name: String, val archived: Boolean, val sortOrder: Int) : Command
+    @Serializable data class ReorderLedgers(val orderedIds:List<String>, val expectedVersion:Long) : Command
+    @Serializable data class ReorderCategories(val ledgerId:String, val direction:Direction, val orderedIds:List<String>, val expectedVersion:Long) : Command
     @Serializable data class DeleteLedger(val id: String) : Command
     @Serializable data class SaveCategory(val ledgerId: String, val direction: Direction, val name: String, val id: String? = null, val enabled: Boolean = true, val sortOrder: Int = 0) : Command
     @Serializable data class DeleteCategory(val id: String) : Command
-    @Serializable data class SaveEntry(val id: String? = null, val ledgerId: String, val kind: EntryKind, val amountMinor: Long, val categoryId: String, val occurrence: String, val note: String, val expectedRevision: Long? = null, val originKind: OriginKind = OriginKind.MANUAL, val captureFingerprint: String? = null, val captureEngineVersion: String? = null) : Command
-    @Serializable data class AddRefund(val expenseId: String, val amountMinor: Long, val occurrence: String, val note: String) : Command
+    @Serializable data class SaveEntry(val id: String? = null, val ledgerId: String, val kind: EntryKind, val amountMinor: Long, val categoryId: String, val occurrence: String, val note: String, val expectedRevision: Long? = null, val originKind: OriginKind = OriginKind.MANUAL, val captureFingerprint: String? = null, val captureEngineVersion: String? = null, val details:EntryDetails? = null, val tagIds:List<String>? = null) : Command
+    @Serializable data class AddRefund(val expenseId: String, val amountMinor: Long, val occurrence: String, val note: String, val details:EntryDetails? = null, val tagIds:List<String>? = null) : Command
     @Serializable data class MoveEntry(val id: String, val ledgerId: String, val categoryId: String) : Command
     @Serializable data class SoftDelete(val id: String) : Command
     @Serializable data class RestoreGroup(val groupId: String) : Command
@@ -82,6 +90,11 @@ interface LedgerRepository {
         val matches=snapshot().entries.filter { (fingerprint!=null && it.captureFingerprint==fingerprint) || (amountMinor!=null && localDate!=null && it.kind==EntryKind.EXPENSE && it.amountMinor==amountMinor && it.localDate==localDate) }
         return CaptureDuplicateSummary(matches.any { fingerprint!=null && it.captureFingerprint==fingerprint },matches.any { amountMinor!=null && localDate!=null && it.kind==EntryKind.EXPENSE && it.amountMinor==amountMinor && it.localDate==localDate },matches.any { !it.active })
     }
+    suspend fun queryActivityPage(scope:ActivityScope, cursor:ActivityCursor?=null, limit:Int=50):ActivityPage = activityPageSnapshot(snapshot(),scope,cursor,limit)
+    suspend fun activitySummary(scope:ActivityScope):ActivitySummary = activitySummarySnapshot(snapshot(),scope)
+    suspend fun panelStatistics(request:PanelRequest):PanelStatistics = PanelQueries.calculate(snapshot(),request)
+    suspend fun accountHistory(request:AccountHistoryRequest):AccountHistorySnapshot = AccountHistoryQueries.calculate(snapshot(),request)
+    suspend fun financeSnapshot(ledgerIds:Set<String> = emptySet()):FinanceSnapshot = FinanceQueries.calculate(snapshot(),ledgerIds)
     suspend fun statistics(scope: QueryScope): StatisticsSnapshot = Statistics.calculate(snapshot(),scope)
     suspend fun snapshot(): LedgerState
     suspend fun replace(state: LedgerState)

@@ -11,6 +11,7 @@ kotlin {
         namespace = "com.dawnyew.ui"
         compileSdk = 37
         minSdk = 30
+        androidResources { enable = true }
     }
     jvm()
     sourceSets {

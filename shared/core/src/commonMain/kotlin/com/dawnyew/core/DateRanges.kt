@@ -44,6 +44,14 @@ data class DateRange(val startDate: String, val endDate: String) {
     }
 }
 
+/** One preference value keeps the inclusive start/end pair atomic across persistence and backup. */
+fun encodeDateRangePreference(range: DateRange): String = "${range.startDate}/${range.endDate}"
+fun decodeDateRangePreference(value: String): DateRange {
+    val parts = value.split('/')
+    if (parts.size != 2) invalid("日期范围偏好无效")
+    return DateRange(parts[0], parts[1])
+}
+
 fun dateRangePreset(preset: DateRangePreset, today: String): DateRange {
     val date = calendarDate(today)
     return when (preset) {

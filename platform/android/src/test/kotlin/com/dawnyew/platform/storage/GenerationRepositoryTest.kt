@@ -44,6 +44,11 @@ class GenerationRepositoryTest {
         var afterCommitFailure: Throwable? = null
         var failLookup = false
         var authorized = true
+        var activityPageReads = 0
+        var activitySummaryReads = 0
+        var financeSnapshotReads = 0
+        var panelReads = 0
+        var historyReads = 0
         val owner = UUID.randomUUID().toString()
         val repository = GenerationRepository(root, staging, env, { name ->
             object : LedgerRepository {
@@ -65,6 +70,21 @@ class GenerationRepositoryTest {
                     replace(mutation.state)
                     afterCommitFailure?.let { afterCommitFailure = null; throw it }
                     return mutation.resultIds
+                }
+                override suspend fun queryActivityPage(scope:ActivityScope,cursor:ActivityCursor?,limit:Int):ActivityPage {
+                    activityPageReads++;return super<LedgerRepository>.queryActivityPage(scope,cursor,limit)
+                }
+                override suspend fun activitySummary(scope:ActivityScope):ActivitySummary {
+                    activitySummaryReads++;return super<LedgerRepository>.activitySummary(scope)
+                }
+                override suspend fun financeSnapshot(ledgerIds:Set<String>):FinanceSnapshot {
+                    financeSnapshotReads++;return super<LedgerRepository>.financeSnapshot(ledgerIds)
+                }
+                override suspend fun panelStatistics(request:PanelRequest):PanelStatistics {
+                    panelReads++;return super<LedgerRepository>.panelStatistics(request)
+                }
+                override suspend fun accountHistory(request:AccountHistoryRequest):AccountHistorySnapshot {
+                    historyReads++;return super<LedgerRepository>.accountHistory(request)
                 }
                 override suspend fun lookupOperation(operationId: String): OperationOutcome? {
                     if (failLookup) throw IOException("injected receipt lookup failure")
@@ -106,6 +126,40 @@ class GenerationRepositoryTest {
         fun active() = File(root, "active").readText()
         suspend fun close() { repository.close(); directory.deleteRecursively() }
     }
+    @Test fun financeQueriesReachTheAuthorizedDatabaseDelegate()=runBlocking {
+        val f=Fixture()
+        try {
+            f.repository.initialize()
+            f.repository.queryActivityPage(ActivityScope())
+            f.repository.activitySummary(ActivityScope())
+            f.repository.financeSnapshot()
+            assertEquals(1,f.activityPageReads)
+            assertEquals(1,f.activitySummaryReads)
+            assertEquals(1,f.financeSnapshotReads)
+            f.authorized=false
+            assertFails { f.repository.queryActivityPage(ActivityScope()) }
+            assertFails { f.repository.activitySummary(ActivityScope()) }
+            assertFails { f.repository.financeSnapshot() }
+            assertEquals(1,f.activityPageReads)
+            assertEquals(1,f.activitySummaryReads)
+            assertEquals(1,f.financeSnapshotReads)
+        } finally {f.close()}
+    }
+    @Test fun dashboardQueriesUseAuthorizedGenerationDelegates() = runBlocking {
+        val f = Fixture()
+        try {
+            f.repository.initialize()
+            val panel=PanelRequest("daily",ActivityScope(startDate="2026-10-01",endDate="2026-10-31"))
+            val history=AccountHistoryRequest(startDate="2026-10-01",endDate="2026-10-31")
+            f.repository.panelStatistics(panel);f.repository.accountHistory(history)
+            assertEquals(1,f.panelReads);assertEquals(1,f.historyReads)
+            f.authorized=false
+            assertFails {f.repository.panelStatistics(panel)}
+            assertFails {f.repository.accountHistory(history)}
+            assertEquals(1,f.panelReads);assertEquals(1,f.historyReads)
+        } finally {f.close()}
+    }
+
     @Test fun directorySyncFailureAfterPointerRenameNeverDeletesActiveCandidate() = runBlocking {
         val f = Fixture()
         try {

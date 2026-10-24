@@ -27,6 +27,10 @@ android {
     }
     buildFeatures { compose = true }
     buildTypes {
+        debug {
+            // Device validation can coexist with a release installation and its private dataset.
+            if (providers.gradleProperty("dawnyewIsolatedDeviceTest").orNull == "true") applicationIdSuffix = ".validation"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

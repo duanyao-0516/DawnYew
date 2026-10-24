@@ -16,7 +16,7 @@ import kotlinx.coroutines.IO
 
 @Database(entities = [MetadataRow::class, LedgerRow::class, CategoryRow::class,
     DeletionGroupRow::class, EntryRow::class, BudgetRow::class, SourceIdentityRow::class,
-    ImportBatchRow::class, ImportMemberRow::class, PreferenceRow::class, ReceiptRow::class], version = CURRENT_DATABASE_VERSION, exportSchema = true)
+    ImportBatchRow::class, ImportMemberRow::class, PreferenceRow::class, ReceiptRow::class, AccountRow::class, EntryDetailsRow::class, EntryTagRow::class, TransferRow::class, DimensionRow::class, ContactRow::class, ObligationRow::class, RecurringPlanRow::class, RecurringOccurrenceRow::class, SavingsPlanRow::class, SavingsMovementRow::class, SavingsWishRow::class, BudgetAllocationRow::class, BudgetReallocationRow::class], version = CURRENT_DATABASE_VERSION, exportSchema = true)
 @ConstructedBy(DawnYewDatabaseConstructor::class)
 abstract class DawnYewDatabase : RoomDatabase() {
     abstract fun ledgerDao(): LedgerDao
@@ -53,7 +53,7 @@ private class DurableConnection(private val delegate: SQLiteConnection) : SQLite
 
 internal fun database(builder: RoomDatabase.Builder<DawnYewDatabase>): DawnYewDatabase = builder
     .setDriver(DurableSQLiteDriver())
-    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
     .setQueryCoroutineContext(Dispatchers.IO)
     .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
     .addCallback(object : RoomDatabase.Callback() {
@@ -82,8 +82,8 @@ private val assertions = mapOf(
     "operation_receipts" to "length(NEW.operationId) = 0",
 )
 
-internal fun installConstraints(connection: SQLiteConnection) {
-    for ((table, assertion) in assertions) {
+internal fun installConstraints(connection: SQLiteConnection, tables:Set<String> = (assertions.keys+financialAssertions.keys)) {
+    for ((table, assertion) in (assertions+financialAssertions).filterKeys { it in tables }) {
         for (event in listOf("INSERT", "UPDATE")) {
             val payloadGuard = if (table == "metadata") "" else " OR json_valid(NEW.payload) != 1"
             connection.execSQL("CREATE TRIGGER ${table}_validate_${event.lowercase()} BEFORE $event ON $table " +
@@ -94,7 +94,7 @@ internal fun installConstraints(connection: SQLiteConnection) {
 
 /** Missing guards indicate a damaged/unsupported database. Do not silently repair or clear it. */
 private fun verifyConstraints(connection: SQLiteConnection) {
-    val expected = assertions.keys.flatMap { listOf("${it}_validate_insert", "${it}_validate_update") }.toSet()
+    val expected = (assertions.keys+financialAssertions.keys).flatMap { listOf("${it}_validate_insert", "${it}_validate_update") }.toSet()
     val actual = mutableSetOf<String>()
     connection.prepare("SELECT name FROM sqlite_master WHERE type='trigger'").use { statement ->
         while (statement.step()) actual += statement.getText(0)

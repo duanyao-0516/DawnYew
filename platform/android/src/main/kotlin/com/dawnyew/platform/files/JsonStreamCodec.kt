@@ -14,6 +14,7 @@ class PreparedBackup internal constructor(
     private val records: Map<String, File>,
     private val checkCancelled: () -> Unit,
 ) : Closeable {
+    val expectedCandidateCounts: Map<String, Long> = BackupProtocol.expectedCandidateCounts(metadata.formatVersion, metadata.counts)
     private var closed = false
     suspend fun visit(type: String, consumer: suspend (List<JsonObject>) -> Unit) {
         check(!closed)
@@ -31,7 +32,7 @@ class PreparedBackup internal constructor(
     }
     internal fun digest(): String {
         val hash = JsonStreamCodec.startDigest(metadata)
-        for (type in BackupProtocol.entityTypes) CanonicalRecordStore.Reader(records.getValue(type)).use { input ->
+        for (type in BackupProtocol.entityTypes(metadata.formatVersion)) CanonicalRecordStore.Reader(records.getValue(type)).use { input ->
             while (true) { checkCancelled(); val record = input.next() ?: break; JsonStreamCodec.hashRecord(hash, type, record.canonical) }
         }
         return hash.finishHex()
@@ -63,7 +64,8 @@ object JsonStreamCodec {
                 stores.getValue(type).add(BackupProtocol.recordKey(type, record), CanonicalJson.write(record).toByteArray(Charsets.UTF_8))
                 actualCounts[type] = stores.getValue(type).count
             }, { type -> stores.getValue(type).finishInput() })
-            if (metadata.counts != actualCounts) invalid("备份计数不一致")
+            if (metadata.counts != actualCounts.filterKeys { it in BackupProtocol.entityTypes(metadata.formatVersion) }) invalid("备份计数不一致")
+            BackupProtocol.entityTypes.filter { it !in metadata.counts }.forEach { stores.getValue(it).finishInput() }
             val sorted = stores.mapValues { (_, store) -> store.finish() }
             val result = PreparedBackup(metadata, directory, sorted, checkCancelled)
             if (result.digest() != metadata.sha256) invalid("备份校验失败，文件可能损坏")
@@ -78,19 +80,19 @@ object JsonStreamCodec {
     fun read(input: InputStream): BackupDocument {
         val records = BackupProtocol.entityTypes.associateWith { ArrayList<JsonObject>() }
         val metadata = parse(input, defaultCancellation, { type, record -> records.getValue(type).add(record) })
-        return metadata.copy(records = records)
+        return metadata.copy(records = records.filterKeys { it in BackupProtocol.entityTypes(metadata.formatVersion) })
     }
     /** Compatibility helper for callers already holding a small immutable document. */
     fun write(document: BackupDocument, output: OutputStream) {
         factory.createGenerator(output, JsonEncoding.UTF8).use { g ->
-            g.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET); writePrefix(g, document.datasetId, document.createdAt)
+            g.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET); writePrefix(g, document.datasetId, document.createdAt, document.formatVersion)
             g.writeObjectFieldStart("entities")
-            for (type in BackupProtocol.entityTypes) {
+            for (type in BackupProtocol.entityTypes(document.formatVersion)) {
                 g.writeArrayFieldStart(type)
                 document.records.getValue(type).sortedBy { BackupProtocol.recordKey(type, it) }.forEach { g.writeRawValue(CanonicalJson.write(it)) }
                 g.writeEndArray()
             }
-            g.writeEndObject(); writeManifest(g, document.counts, document.sha256); g.writeEndObject(); g.flush()
+            g.writeEndObject(); writeManifest(g, document.counts, document.sha256, document.formatVersion); g.writeEndObject(); g.flush()
         }
     }
 
@@ -121,13 +123,13 @@ object JsonStreamCodec {
             checkCancelled(); g.writeEndObject(); writeManifest(g, counts, hash.finishHex()); g.writeEndObject(); g.flush()
         }
     }
-    private fun writePrefix(g: JsonGenerator, datasetId: String, createdAt: String) {
-        g.writeStartObject(); g.writeStringField("format", BackupProtocol.FORMAT); g.writeNumberField("formatVersion", 1)
+    private fun writePrefix(g: JsonGenerator, datasetId: String, createdAt: String, formatVersion: Int = 2) {
+        g.writeStartObject(); g.writeStringField("format", BackupProtocol.FORMAT); g.writeNumberField("formatVersion", formatVersion)
         g.writeStringField("datasetId", datasetId); g.writeStringField("createdAt", createdAt)
     }
-    private fun writeManifest(g: JsonGenerator, counts: Map<String, Long>, digest: String) {
+    private fun writeManifest(g: JsonGenerator, counts: Map<String, Long>, digest: String, formatVersion: Int = 2) {
         g.writeObjectFieldStart("manifest"); g.writeNumberField("canonicalizationVersion", 1); g.writeObjectFieldStart("counts")
-        BackupProtocol.entityTypes.forEach { g.writeStringField(it, counts.getValue(it).toString()) }
+        BackupProtocol.entityTypes(formatVersion).forEach { g.writeStringField(it, counts.getValue(it).toString()) }
         g.writeEndObject(); g.writeStringField("sha256", digest); g.writeEndObject()
     }
     internal fun startDigest(metadata: BackupDocument) = Sha256().update((CanonicalJson.write(BackupProtocol.metadata(metadata)) + "\n").toByteArray(Charsets.UTF_8))
@@ -168,16 +170,17 @@ object JsonStreamCodec {
                 else -> invalid("备份字段必须为标量且不接受浮点数")
             }
             fun text(value: JsonElement): String { val primitive = value as? JsonPrimitive ?: invalid("备份文本字段类型错误"); if (!primitive.isString) invalid("备份文本字段类型错误"); return primitive.content }
-            fun version(value: JsonElement): Int { val primitive = value as? JsonPrimitive ?: invalid("备份版本类型错误"); if (primitive.isString || primitive.intOrNull != 1) invalid("不支持的备份版本"); return 1 }
+            fun version(value: JsonElement, allowed: Set<Int>): Int { val primitive = value as? JsonPrimitive ?: invalid("备份版本类型错误"); val number = primitive.intOrNull; if (primitive.isString || number !in allowed) invalid("不支持的备份版本"); return number!! }
             if (next() != JsonToken.START_OBJECT) invalid("备份根节点必须为对象")
             val seen = mutableSetOf<String>(); val root = mutableMapOf<String, JsonElement>(); val manifest = mutableMapOf<String, JsonElement>()
             val counts = linkedMapOf<String, Long>()
+            val entityTypes = mutableSetOf<String>()
             while (next() != JsonToken.END_OBJECT) {
                 val key = field(rootFields, seen); next()
                 when (key) {
                     "entities" -> {
                         if (p.currentToken() != JsonToken.START_OBJECT) invalid("实体集合必须为对象")
-                        val types = mutableSetOf<String>()
+                        val types = entityTypes
                         while (next() != JsonToken.END_OBJECT) {
                             val type = field(BackupProtocol.entityTypes.toSet(), types)
                             if (next() != JsonToken.START_ARRAY) invalid("实体必须为数组")
@@ -189,7 +192,6 @@ object JsonStreamCodec {
                             }
                             typeComplete(type)
                         }
-                        if (types != BackupProtocol.entityTypes.toSet()) invalid("备份实体集合不完整")
                     }
                     "manifest" -> {
                         if (p.currentToken() != JsonToken.START_OBJECT) invalid("备份清单必须为对象")
@@ -204,7 +206,6 @@ object JsonStreamCodec {
                                     if (!Regex("0|[1-9][0-9]*").matches(value)) invalid("备份计数格式错误")
                                     counts[type] = value.toLongOrNull() ?: invalid("备份计数超出范围")
                                 }
-                                if (types != BackupProtocol.entityTypes.toSet()) invalid("备份计数不完整")
                             } else manifest[name] = scalar()
                         }
                         if (keys != manifestFields) invalid("备份清单不完整")
@@ -216,7 +217,9 @@ object JsonStreamCodec {
             if (seen != rootFields) invalid("备份字段不完整")
             if (text(root.getValue("format")) != BackupProtocol.FORMAT) invalid("不是 DawnYew 完整备份")
             val result = BackupDocument(text(root.getValue("datasetId")), text(root.getValue("createdAt")), emptyMap(), counts,
-                text(manifest.getValue("sha256")), version(root.getValue("formatVersion")), version(manifest.getValue("canonicalizationVersion")))
+                text(manifest.getValue("sha256")), version(root.getValue("formatVersion"), setOf(1,2)), version(manifest.getValue("canonicalizationVersion"), setOf(1)))
+            val expectedTypes = BackupProtocol.entityTypes(result.formatVersion).toSet()
+            if (entityTypes != expectedTypes || counts.keys != expectedTypes) invalid("备份实体或计数集合与版本不一致")
             validateId(result.datasetId); validateUtc(result.createdAt); validateDigest(result.sha256)
             return result
         }

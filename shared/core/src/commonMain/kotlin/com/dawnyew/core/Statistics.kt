@@ -10,10 +10,10 @@ data class AmountGroup(val id: String, val label: String, val amountMinor: Long)
 data class FinancialAmountGroup(val id:String,val label:String,val expense:Long,val refunds:Long) { val netExpense get()=Money.add(expense,-refunds) }
 data class TrendPoint(val period: String, val income: Long, val expense: Long, val refunds: Long) { val netExpense get() = Money.add(expense,-refunds) }
 data class StatisticsSnapshot(val contentVersion: Long, val scope: QueryScope, val income: Long, val expense: Long, val refunds: Long,
-    val entries: List<Entry>, val categories: List<AmountGroup>, val ledgers: List<AmountGroup>, val trend: List<TrendPoint>, val datasetId: String = "", val entryCount:Long=entries.size.toLong(), val categoryBreakdown:List<FinancialAmountGroup> = emptyList(), val ledgerBreakdown:List<FinancialAmountGroup> = emptyList()) {
+    val entries: List<Entry>, val categories: List<AmountGroup>, val ledgers: List<AmountGroup>, val trend: List<TrendPoint>, val datasetId: String = "", val entryCount:Long=entries.size.toLong(), val categoryBreakdown:List<FinancialAmountGroup> = emptyList(), val ledgerBreakdown:List<FinancialAmountGroup> = emptyList(), val budgetExpense:Long=expense, val budgetRefunds:Long=refunds) {
     val netExpense get() = Money.add(expense,-refunds)
     val netIncome get() = Money.add(income,-netExpense)
-    val budgetUsed get() = netExpense.coerceAtLeast(0)
+    val budgetUsed get() = Money.add(budgetExpense,-budgetRefunds).coerceAtLeast(0)
 }
 object Statistics {
     fun calculate(state: LedgerState, scope: QueryScope): StatisticsSnapshot {
@@ -38,6 +38,8 @@ object Statistics {
         val trend=periods.map { period -> val list=grouped[period].orEmpty();TrendPoint(period,sum(list.filter { it.kind==EntryKind.INCOME }),sum(list.filter { it.kind==EntryKind.EXPENSE }),sum(list.filter { it.kind==EntryKind.REFUND })) }
         val categoryBreakdown=entries.filter { it.kind!=EntryKind.INCOME }.groupBy { it.categoryId }.map { (id,list) -> FinancialAmountGroup(id,state.categories.find { it.id==id }?.name ?: "未知分类",sum(list.filter { it.kind==EntryKind.EXPENSE }),sum(list.filter { it.kind==EntryKind.REFUND })) }.sortedByDescending { it.expense }
         val ledgerBreakdown=entries.groupBy { it.ledgerId }.map { (id,list) -> FinancialAmountGroup(id,state.ledgers.find { it.id==id }?.name ?: "未知账本",sum(list.filter { it.kind==EntryKind.EXPENSE }),sum(list.filter { it.kind==EntryKind.REFUND })) }.sortedByDescending { it.netExpense }
-        return StatisticsSnapshot(state.contentVersion,scope,income,expense,refunds,entries,categories,ledgers,trend,state.datasetId,entries.size.toLong(),categoryBreakdown,ledgerBreakdown)
+        val details=state.entryDetails.associateBy { it.entryId }
+        val budgetEntries=entries.filter { e -> details[if(e.kind==EntryKind.REFUND) e.parentExpenseId else e.id]?.excludedFromBudget!=true }
+        return StatisticsSnapshot(state.contentVersion,scope,income,expense,refunds,entries,categories,ledgers,trend,state.datasetId,entries.size.toLong(),categoryBreakdown,ledgerBreakdown,sum(budgetEntries.filter { it.kind==EntryKind.EXPENSE }),sum(budgetEntries.filter { it.kind==EntryKind.REFUND }))
     }
 }

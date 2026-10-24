@@ -21,6 +21,31 @@ class EntryQueryTest {
             val s=base.copy(entries=entries);repo.replace(s);block(repo,s)
         } finally { repo.close();directory.deleteRecursively() }
     }
+    @Test fun fullMonthAndCrossMonthRangesRetainBoundaryTransactionsAndZeroBuckets()=runBlocking {
+        fixture(0) { repo,base ->
+            val category=base.categories.first {it.direction==Direction.EXPENSE}
+            val facts=listOf("2026-09-14" to 900L,"2026-09-15" to 100L,"2026-10-01" to 200L,"2026-10-10" to 300L,"2026-10-11" to 1000L,"2026-10-31" to 400L)
+            val state=base.copy(entries=facts.map { (date,amount) -> Entry(env.id(),category.ledgerId,EntryKind.EXPENSE,amount,category.id,date+"T10:00:00",createdAt=env.utcNow(),updatedAt=env.utcNow(),creationOperationId=env.id()) })
+            repo.replace(state)
+            val whole=QueryScope(setOf(category.ledgerId),"2026-10-01","2026-10-31")
+            val month=repo.statistics(whole)
+            assertEquals(whole,month.scope);assertEquals(1900L,month.expense);assertEquals(31,month.trend.size)
+            assertEquals(TrendPoint("2026-10-01",0,200,0),month.trend.first())
+            assertEquals(TrendPoint("2026-10-31",0,400,0),month.trend.last())
+            val selected=whole.copy(startDate="2026-09-15",endDate="2026-10-10")
+            val custom=repo.statistics(selected)
+            assertEquals(selected,custom.scope);assertEquals(600L,custom.expense);assertEquals(26,custom.trend.size)
+            assertEquals(TrendPoint("2026-09-15",0,100,0),custom.trend.first())
+            assertEquals(TrendPoint("2026-10-10",0,300,0),custom.trend.last())
+            assertEquals(Statistics.calculate(state,selected).trend,custom.trend)
+            val longRange=whole.copy(startDate="2026-06-15",endDate="2026-10-10")
+            val monthly=repo.statistics(longRange)
+            assertEquals(listOf("2026-06","2026-07","2026-08","2026-09","2026-10"),monthly.trend.map {it.period})
+            assertEquals(1500L,monthly.expense)
+            assertEquals(Statistics.calculate(state,longRange).trend,monthly.trend)
+        }
+    }
+
     @Test fun sameSecondKeysetPagesAreCompleteStableAndRejectStaleCursor()=runBlocking {
         fixture(251) { repo,s ->
             val scope=QueryScope();var cursor:EntryCursor?=null;val loaded=mutableListOf<Entry>()

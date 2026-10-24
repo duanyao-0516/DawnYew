@@ -3,7 +3,7 @@ package com.dawnyew.platform.security
 import java.util.UUID
 
 /** Process-memory authorization. No token is serialized into an Intent, Bundle, or saved state. */
-class SessionCoordinator(private val now: () -> Long, private val processId: String = UUID.randomUUID().toString()) {
+class SessionCoordinator(private val now: () -> Long, private val processId: String = UUID.randomUUID().toString(), private val onRevoked: () -> Unit = {}) {
     class Lease internal constructor(val id: Long, val epoch: Long, val issued: Long, val deadline: Long, val process: String)
     @Volatile var epoch: Long = 0; private set
     @Volatile var authorized: Boolean = false; private set
@@ -55,7 +55,7 @@ class SessionCoordinator(private val now: () -> Long, private val processId: Str
         if (deviceLocked || external?.let { !valid(it) } == true) revoke()
         if (authentication?.let { !valid(it) } == true) authentication = null
     }
-    fun revoke() { epoch++; external = null; externalDeparted = false; authentication = null; authorized = !lockEnabled }
+    fun revoke() { epoch++; external = null; externalDeparted = false; authentication = null; authorized = !lockEnabled; onRevoked() }
     private fun lease(): Lease { val time = now(); return Lease(++sequence, epoch, time, time + 120_000, processId) }
     private fun valid(value: Lease): Boolean = value.process == processId && value.epoch == epoch && now() in value.issued..value.deadline
 }

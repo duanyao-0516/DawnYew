@@ -1,0 +1,285 @@
+{
+  "sourceApkSha256": "4ecc8cf069de39e2120962d3e426a73fa45a13d56b4dafa5694b278cc66cc877",
+  "assets": [
+    {
+      "usage": "首页",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_home.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_home.png",
+      "sha256": "ef42148c36685179f5e730199ec8379eddf19245f4d6b3ef4323e3bc121015c9",
+      "tinted": true
+    },
+    {
+      "usage": "账户",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_account.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_account.png",
+      "sha256": "876e37d9bc03a39946db91517bffdacb78e04f8f09371bd7c21fa3bce42726f4",
+      "tinted": true
+    },
+    {
+      "usage": "统计",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_stat.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_stat.png",
+      "sha256": "092b638fa871e7ec348d4331f1cd6e7419af3618065db07dfa72b41412bf514b",
+      "tinted": true
+    },
+    {
+      "usage": "更多",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_advance.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_advance.png",
+      "sha256": "d865ba15ef5a948101edaa95e9ef1c4f384c25efe37548c60473d37c9dc1440b",
+      "tinted": true
+    },
+    {
+      "usage": "我的",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_me.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_me.png",
+      "sha256": "3a2c1b4ff8f4586668a83e9afa658dc4e2e8fbf279b9ee237b71c2f14c422b12",
+      "tinted": true
+    },
+    {
+      "usage": "借入",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/more_borrow.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_more_borrow.png",
+      "sha256": "ce09e376514711908b2c8eb00d4d2a914210c541f9cf7d5eadfb310bdf440711",
+      "tinted": false
+    },
+    {
+      "usage": "借出",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/more_lend.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_more_lend.png",
+      "sha256": "56b782ba4a1e82567a015f459dfcb37b2674c3b6e2fc458949be67d1a3200bc4",
+      "tinted": false
+    },
+    {
+      "usage": "报销",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/more_remib.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_more_remib.png",
+      "sha256": "2436b5ce88bda266f9ef8792c68056f7d1f1d89cffeecd16b85ea2f9ee1ea32d",
+      "tinted": false
+    },
+    {
+      "usage": "往来",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/more_blender.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_more_blender.png",
+      "sha256": "190d5400052290e373dc53eace77ec451463edd72476fa585911501c4a447167",
+      "tinted": false
+    },
+    {
+      "usage": "周期",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/more_cycle.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_more_cycle.png",
+      "sha256": "a927d925cd584f2199efea890c5e2766e059f3ecd638c45c81181fa500bdda47",
+      "tinted": false
+    },
+    {
+      "usage": "预算",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/more_budget.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_more_budget.png",
+      "sha256": "33c18bfbd5e528854a1edbfa16175dff4fa14da2bd5f0cb0c1697635790509a1",
+      "tinted": false
+    },
+    {
+      "usage": "存钱",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/more_savings.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_more_savings.png",
+      "sha256": "a2c47bc976069db206b5944698be9f635fec656dc9b46ed1ab3805b3b1d3d891",
+      "tinted": false
+    },
+    {
+      "usage": "工具箱",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_advance.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_advance.png",
+      "sha256": "d865ba15ef5a948101edaa95e9ef1c4f384c25efe37548c60473d37c9dc1440b",
+      "tinted": true
+    },
+    {
+      "usage": "分类",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_category.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_category.png",
+      "sha256": "c1d24471206158e8e2b1bdf84fddb1ea44be2c832de29ed09cf5f98b20f0fd10",
+      "tinted": false
+    },
+    {
+      "usage": "分类管理",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_category.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_category.png",
+      "sha256": "c1d24471206158e8e2b1bdf84fddb1ea44be2c832de29ed09cf5f98b20f0fd10",
+      "tinted": false
+    },
+    {
+      "usage": "项目",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_project.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_project.png",
+      "sha256": "dd89331a4bf0ce6f4237fe50a4053c6d681c53ddec75f337358d664ed432a676",
+      "tinted": false
+    },
+    {
+      "usage": "商家",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_merchant.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_merchant.png",
+      "sha256": "b2db1a1ec867ca6695939815369ccb04cfbf943e7efaec0b1cde670ef073617c",
+      "tinted": false
+    },
+    {
+      "usage": "标签",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_tag.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_tag.png",
+      "sha256": "d58834ce6cf21204c57b024d6e4f70ced2f794893ed9eb3505eef31631bf4bd4",
+      "tinted": false
+    },
+    {
+      "usage": "导入",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_import.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_import.png",
+      "sha256": "8d4463ad999e953bccef43094a0fb2c5a0fef887ba5ce330e78996e774a1a38d",
+      "tinted": false
+    },
+    {
+      "usage": "导出",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_export.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_export.png",
+      "sha256": "59397f5b131ca9f49e3e32755b4e95cb067f9ae6a2a95ae63d823f3c4da59e43",
+      "tinted": false
+    },
+    {
+      "usage": "账本",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_book.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_book.png",
+      "sha256": "b939693ef163c36d1ecd94cf98a4d7156547266272ea27bc2c5c9e3976e33ea7",
+      "tinted": false
+    },
+    {
+      "usage": "账本管理",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_book.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_book.png",
+      "sha256": "b939693ef163c36d1ecd94cf98a4d7156547266272ea27bc2c5c9e3976e33ea7",
+      "tinted": false
+    },
+    {
+      "usage": "自动",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_auto_accounting.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_auto_accounting.png",
+      "sha256": "00949526745b8da5abe408441d629e5ca02837e0919c7342fbcb83a04544a629",
+      "tinted": true
+    },
+    {
+      "usage": "组件",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_ic_widget.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_ic_widget.png",
+      "sha256": "a79a526509a9715b0a2dc328b94b8dc7f88be4e883dfdf19efb76b96192e0f4d",
+      "tinted": true
+    },
+    {
+      "usage": "备份",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_backup.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_backup.png",
+      "sha256": "2f7a9219ea6245fcda46b847c8c1a94622dc4dcef81d9476b5ca68b8e6f866f5",
+      "tinted": true
+    },
+    {
+      "usage": "安全",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_secure.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_secure.png",
+      "sha256": "c23220b0df3cddb6040436f1a1df251ef0199ab45c511475289f5bc264f979a1",
+      "tinted": true
+    },
+    {
+      "usage": "货币",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_exchange.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_exchange.png",
+      "sha256": "4819a02b89fc010bbdafb8b62a3378b541ae3da554449d5ccaa4d03da5a7fc0c",
+      "tinted": true
+    },
+    {
+      "usage": "提醒",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_alert.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_alert.png",
+      "sha256": "5556a13515e6f623d4ff5cd8b87008c869b15599b778a76f4f80c8d1598bb50d",
+      "tinted": true
+    },
+    {
+      "usage": "手册",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/me_manual.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_me_manual.png",
+      "sha256": "9e929e131f777875a8c0192de25d09adc987635a3e13945a0cd47cd8cf690924",
+      "tinted": true
+    },
+    {
+      "usage": "搜索",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_search_black_24dp.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_search_black_24dp.png",
+      "sha256": "41227672b55930461e05538752f6c46b52f51f78e5d991d4c7a7bde449171f2d",
+      "tinted": true
+    },
+    {
+      "usage": "设置",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_settings_black_48dp.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_settings_black_48dp.png",
+      "sha256": "c7ba46a2ce943bb42744b00338101059e5c61e9bab64816280856c2de6a8a961",
+      "tinted": true
+    },
+    {
+      "usage": "新增",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxhdpi/ic_action_plus.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxhdpi/dwy_ref_ic_action_plus.png",
+      "sha256": "8712ef49d2c96bda7cedc98b268dc91763eee23cbd78103cf3df688a4ff68c24",
+      "tinted": true
+    },
+    {
+      "usage": "返回",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_arrow_back_black_24dp.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_arrow_back_black_24dp.png",
+      "sha256": "e87e2d82a9eccb4f2fb9ae7b92511c5e5ca923d4e549170ba2eb2603c8bbc5bf",
+      "tinted": true
+    },
+    {
+      "usage": "前进",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_chevron_right_black_24dp.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_chevron_right_black_24dp.png",
+      "sha256": "7ee2601139c51af06eeebf132f38405e686979127fde6f483c2d28845b95f8e6",
+      "tinted": true
+    },
+    {
+      "usage": "回收站",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_restore_page_black_48dp.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_restore_page_black_48dp.png",
+      "sha256": "28889082f2d1d15ff5bae6deabbdd31819ef321d6d30c9d5a1c1823bbb383168",
+      "tinted": true
+    },
+    {
+      "usage": "转账",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_swap_horiz_black_24dp.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_swap_horiz_black_24dp.png",
+      "sha256": "9fe4b1c92e97655937e956ce833cbe7fdebdec7e898a256fae0a36a3f52c3fc0",
+      "tinted": true
+    },
+    {
+      "usage": "现金",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_account.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_account.png",
+      "sha256": "876e37d9bc03a39946db91517bffdacb78e04f8f09371bd7c21fa3bce42726f4",
+      "tinted": true
+    },
+    {
+      "usage": "储蓄",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_account.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_account.png",
+      "sha256": "876e37d9bc03a39946db91517bffdacb78e04f8f09371bd7c21fa3bce42726f4",
+      "tinted": true
+    },
+    {
+      "usage": "银行卡",
+      "source": ".local/research/bohe-20261024/jadx/resources/res/drawable-xxxhdpi/ic_account.png",
+      "destination": "shared/ui/src/androidMain/res/drawable-xxxhdpi/dwy_ref_ic_account.png",
+      "sha256": "876e37d9bc03a39946db91517bffdacb78e04f8f09371bd7c21fa3bce42726f4",
+      "tinted": true
+    },
+    {
+      "usage": "资产背景",
+      "source": ".local/research/bohe-20261024/jadx/resources/assets/widget_images/account_theme/image_account_header.jpg",
+      "destination": "shared/ui/src/androidMain/res/drawable-nodpi/dwy_ref_image_account_header.jpg",
+      "sha256": "fb447fd940fbba3cb24683221a0baaf4c5777bc7421f044170d7714793540310",
+      "tinted": false
+    }
+  ]
+}

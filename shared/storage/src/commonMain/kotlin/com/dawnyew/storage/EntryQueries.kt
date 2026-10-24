@@ -23,7 +23,7 @@ internal fun entryFilter(scope:QueryScope,cursor:EntryCursor?=null):EntryFilter 
     cursor?.let { predicates += "(e.occurrence < ? OR (e.occurrence = ? AND e.id < ?))";args += listOf(it.occurrence,it.occurrence,it.id) }
     return EntryFilter(predicates.joinToString(" AND "),args)
 }
-private const val FROM=" FROM entries e JOIN ledgers l ON l.id=e.ledgerId WHERE "
+private const val FROM=" FROM entries e JOIN ledgers l ON l.id=e.ledgerId LEFT JOIN entry_details d ON d.entryId=e.id LEFT JOIN entry_details pd ON pd.entryId=e.parentExpenseId WHERE "
 private val queryJson=Json { encodeDefaults=true }
 
 internal suspend fun DawnYewDatabase.readEntryPage(scope:QueryScope,cursor:EntryCursor?,limit:Int):EntryPage = useReaderConnection { connection ->
@@ -43,7 +43,8 @@ internal suspend fun DawnYewDatabase.readStatistics(scope:QueryScope):Statistics
         val dao=ledgerDao();val meta=dao.metadata() ?: throw DomainException(ErrorCode.CORRUPT_DATA,"数据库缺少元信息")
         val filter=entryFilter(scope)
         val sums="COALESCE(SUM(CASE WHEN e.kind='INCOME' THEN e.amountMinor ELSE 0 END),0),COALESCE(SUM(CASE WHEN e.kind='EXPENSE' THEN e.amountMinor ELSE 0 END),0),COALESCE(SUM(CASE WHEN e.kind='REFUND' THEN e.amountMinor ELSE 0 END),0)"
-        val totals=connection.usePrepared("SELECT $sums,COUNT(*)"+FROM+filter.where) { s -> filter.bind(s);check(s.step());listOf(s.getLong(0),s.getLong(1),s.getLong(2),s.getLong(3)) }
+        val budgetSums="COALESCE(SUM(CASE WHEN e.kind='EXPENSE' AND COALESCE(d.excludedFromBudget,0)=0 THEN e.amountMinor ELSE 0 END),0),COALESCE(SUM(CASE WHEN e.kind='REFUND' AND COALESCE(pd.excludedFromBudget,0)=0 THEN e.amountMinor ELSE 0 END),0)"
+        val totals=connection.usePrepared("SELECT $sums,COUNT(*),$budgetSums"+FROM+filter.where) { s -> filter.bind(s);check(s.step());(0..5).map(s::getLong) }
         val categoryLabels=dao.categoryRows().associate { it.id to queryJson.decodeFromString<Category>(it.payload).name }
         val ledgerLabels=dao.ledgerRows().associate { it.id to queryJson.decodeFromString<Ledger>(it.payload).name }
         val categoryBreakdown=connection.usePrepared("SELECT e.categoryId,$sums"+FROM+filter.where+" AND e.kind IN ('EXPENSE','REFUND') GROUP BY e.categoryId ORDER BY 3 DESC,e.categoryId") { s ->
@@ -62,7 +63,7 @@ internal suspend fun DawnYewDatabase.readStatistics(scope:QueryScope):Statistics
             var date=if(daily) start else LocalDate(start.year,start.month,1)
             while(date<=end) { add(if(daily) date.toString() else date.toString().take(7));date=date.plus(1,if(daily) DateTimeUnit.DAY else DateTimeUnit.MONTH) }
         }
-        StatisticsSnapshot(meta.contentVersion,scope,totals[0],totals[1],totals[2],emptyList(),categories,ledgers,periods.map { observed[it] ?: TrendPoint(it,0,0,0) },meta.datasetId,totals[3],categoryBreakdown,ledgerBreakdown)
+        StatisticsSnapshot(meta.contentVersion,scope,totals[0],totals[1],totals[2],emptyList(),categories,ledgers,periods.map { observed[it] ?: TrendPoint(it,0,0,0) },meta.datasetId,totals[3],categoryBreakdown,ledgerBreakdown,budgetExpense=totals[4],budgetRefunds=totals[5])
     }
 }
 

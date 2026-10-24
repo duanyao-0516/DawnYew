@@ -59,6 +59,21 @@ catch (_: Exception) { StatisticsView.Error("统计未完成，请重试或调�
 /** The home dashboard summarizes the selected ledger and period, independently of entry searches. */
 fun homeStatisticsScope(query:QueryScope):QueryScope = query.copy(kinds=emptySet(),categoryIds=emptySet(),keyword="")
 
+/** Statistics contain ordinary entries; financial transfers must not enter an amount-chart drill. */
+fun homePeriodDrillScope(source: QueryScope, period: String? = null): ActivityScope =
+    drillScope(source, period = period).copy(kinds = source.kinds.ifEmpty { EntryKind.entries.toSet() }).toActivityScope()
+
+/** Monthly budget/comparison cards explicitly use the natural month containing the range end. */
+fun homeMonthlyScope(query: QueryScope): QueryScope {
+    return homeCalendarScope(query, query.endDate.take(7))
+}
+
+/** A calendar page has its own month; changing it never mutates the dashboard's selected range. */
+fun homeCalendarScope(query: QueryScope, month: String): QueryScope {
+    val bounds = monthRange(month)
+    return homeStatisticsScope(query).copy(startDate = bounds.first, endDate = bounds.second)
+}
+
 /** Today follows the same ledgers as the dashboard, even when its selected period is historical. */
 fun todayStatisticsScope(query:QueryScope,today:String):QueryScope = homeStatisticsScope(query).copy(startDate=today,endDate=today)
 
@@ -80,4 +95,11 @@ data class UiNavigation(
         "明细","账单详情" -> copy(detailsScope=value)
         else -> copy(homeScope=value)
     }
+}
+
+/** Annual bars keep the selected ledger but aggregate the full selected year. */
+fun yearlyStatisticsScope(query:QueryScope):QueryScope {
+    val year=query.startDate.take(4)
+    validateOccurrence("$year-01-01T00:00:00")
+    return homeStatisticsScope(query).copy(startDate="$year-01-01",endDate="$year-12-31")
 }

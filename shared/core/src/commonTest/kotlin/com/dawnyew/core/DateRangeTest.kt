@@ -3,6 +3,18 @@ package com.dawnyew.core
 import kotlin.test.*
 
 class DateRangeTest {
+    @Test fun rangePreferenceIsOneValidatedAtomicPair() {
+        val range = DateRange("2026-09-15", "2026-10-10")
+        assertEquals("2026-09-15/2026-10-10", encodeDateRangePreference(range))
+        assertEquals(range, decodeDateRangePreference(encodeDateRangePreference(range)))
+        validatePreference(UserPreference("lastHomeRange", encodeDateRangePreference(range)))
+        listOf("2026-09-15", "2026-10-10/2026-09-15", "2026-09-31/2026-10-10", "2026-09-15/2026-10-10/extra").forEach {
+            assertFailsWith<DomainException> { validatePreference(UserPreference("lastHomeRange", it)) }
+        }
+        // Existing backups keep their original supported month field.
+        validatePreference(UserPreference("lastPeriod", "2026-09"))
+    }
+
     @Test fun acceptsInclusiveSingleDayAndSupportedYearBoundaries() {
         assertEquals("2024-02-29", DateRange("2024-02-29", "2024-02-29").endDate)
         assertEquals("0001-01-01", DateRange("0001-01-01", "9999-12-31").startDate)

@@ -6,7 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 
 enum class DocumentContainer { XLSX, CSV, TEXT }
-data class DocumentFacts(val mimeType:String,val container:DocumentContainer,val physicalRowCount:Int,val fileDigest:String)
+data class DocumentFacts(val mimeType:String,val container:DocumentContainer,val physicalRowCount:Int,val fileDigest:String,val logicalRecordCount:Int?=null) { val previewRecordCount get()=logicalRecordCount ?: physicalRowCount }
 sealed interface TemplateProbe {
     data class ExactMatch(val adapterId:String,val version:String):TemplateProbe
     data class Unsupported(val reason:String):TemplateProbe
@@ -15,7 +15,7 @@ sealed interface TemplateProbe {
 object TemplateDetection {
     fun inspect(adapters:List<BillTemplateAdapter>,facts:DocumentFacts,header:List<String>):TemplateProbe {
         validateDigest(facts.fileDigest)
-        if(facts.physicalRowCount<1) return TemplateProbe.Unsupported("文件没有可识别的物理行")
+        if(facts.previewRecordCount<1) return TemplateProbe.Unsupported("文件没有可识别的记录")
         val matches=mutableListOf<TemplateProbe.ExactMatch>();val ambiguous=mutableSetOf<String>()
         adapters.filter { it.descriptor.availability==TemplateAvailability.AVAILABLE && facts.container in it.allowedContainers && facts.mimeType in it.allowedMimeTypes }.forEach { adapter ->
             when(val probe=adapter.inspect(facts,header)) {
@@ -54,9 +54,11 @@ data class ImportPreview(val rows:List<PreviewRow>,val counts:Map<PreviewDisposi
 object ImportPreviewer {
     fun preview(facts:DocumentFacts,context:PreviewContext,parsed:List<ParsedImportRow>,mapping:ImportMappingPlan,selection:ImportSelection,state:LedgerState,environment:DomainEnvironment):ImportPreview {
         validateDigest(facts.fileDigest)
-        if(parsed.size!=facts.physicalRowCount || parsed.map { it.rowNumber }.toSet()!=(1..facts.physicalRowCount).toSet()) invalid("预览必须覆盖全部物理行且行号唯一")
-        if(mapping.rows.map { it.rowNumber }.distinct().size!=mapping.rows.size || mapping.rows.any { it.rowNumber !in 1..facts.physicalRowCount }) invalid("映射行号无效")
-        if(selection.selectedRows.any { it !in 1..facts.physicalRowCount } || !selection.selectedRows.containsAll(selection.keepSuspectedRows)) invalid("选择行号无效")
+        val recordCount=facts.previewRecordCount
+        if(recordCount !in 0..10_000) invalid("预览记录最多10000条")
+        if(parsed.size!=recordCount || parsed.map { it.rowNumber }.toSet()!=(1..recordCount).toSet()) invalid("预览必须覆盖全部记录且逻辑编号唯一")
+        if(mapping.rows.map { it.rowNumber }.distinct().size!=mapping.rows.size || mapping.rows.any { it.rowNumber !in 1..recordCount }) invalid("映射行号无效")
+        if(selection.selectedRows.any { it !in 1..recordCount } || !selection.selectedRows.containsAll(selection.keepSuspectedRows)) invalid("选择行号无效")
         val map=mapping.rows.associateBy { it.rowNumber }
         val mapped=parsed.map { row -> if(row is ParsedImportRow.Valid) {
             val candidate=row.candidate;val target=map[row.rowNumber]
@@ -99,7 +101,14 @@ object ImportPreviewer {
         var plan:ImportPlan?=null;var impact=ImportImpact(0,0,0,0)
         if(selected.isEmpty()) problems+="至少选择一条可提交候选"
         if(problems.isEmpty()) {
-            val candidatePlan=ImportPlan(context.batchId,context.submissionId,state.datasetId,state.contentVersion,context.databaseEpoch,context.adapterId,context.adapterVersion,facts.fileDigest,mapping.digest(),mapping.newLedgers,mapping.newCategories,selected).sealed()
+            // CSV discovers categories before the user selects rows. Only inserted rows may
+            // create them; a skipped or already imported source has no category side effect.
+            val newCategories=if(context.adapterId==DAWNYEW_CSV_ADAPTER_ID) {
+                val insertedRows=rows.filter { it.disposition==PreviewDisposition.NEW }.map { it.rowNumber }.toSet()
+                val usedCategories=selected.filter { it.rowNumber in insertedRows }.map { it.entry.categoryId }.toSet()
+                mapping.newCategories.filter { it.id in usedCategories }
+            } else mapping.newCategories
+            val candidatePlan=ImportPlan(context.batchId,context.submissionId,state.datasetId,state.contentVersion,context.databaseEpoch,context.adapterId,context.adapterVersion,facts.fileDigest,mapping.digest(),mapping.newLedgers,newCategories,selected).sealed()
             try {
                 val simulation=DomainEngine(environment).previewImport(state,candidatePlan)
                 val existing=state.entries.map { it.id }.toSet();val added=simulation.state.entries.filter { it.id !in existing }

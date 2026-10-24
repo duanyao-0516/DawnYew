@@ -7,6 +7,7 @@ data class TemplateDescriptor(val id:String,val name:String,val availability:Tem
 /** No vendor layout is inferred. Register a real adapter only after samples and mapping review. */
 object TemplateRegistry {
     val templates=listOf(
+        dawnYewCsvDescriptor,
         TemplateDescriptor("wechat","微信历史账单",TemplateAvailability.AWAITING_SPECIFICATION,"等待账单模板样本与字段规则确认"),
         TemplateDescriptor("alipay","支付宝历史账单",TemplateAvailability.AWAITING_SPECIFICATION,"等待账单模板样本与字段规则确认"),
         TemplateDescriptor("dawnyew","DawnYew Excel 模板",TemplateAvailability.AWAITING_SPECIFICATION,"等待模板布局确认；当前可使用 JSON 完整备份"),
@@ -24,7 +25,7 @@ object ImportDuplicates {
             if (identity!=null && identity.entryId!=local.id) return DuplicateDisposition.IDENTITY_CONFLICT
             val prior=state.sourceIdentities.filter { it.entryId==local.id }
             val sameSources=if(source==null) prior.isEmpty() else prior.size==1 && sameSource(prior.single(),source)
-            return if(sameImportedBusiness(local,candidate.entry) && sameSources) DuplicateDisposition.SAME_LOCAL_ID else DuplicateDisposition.IDENTITY_CONFLICT
+            return if(sameImportedBusiness(local,candidate.entry) && (sameSources || isSameDatasetCsvIdentity(source,candidate.entry,state.datasetId) && (identity==null || sameSource(identity,source)))) DuplicateDisposition.SAME_LOCAL_ID else DuplicateDisposition.IDENTITY_CONFLICT
         }
         if(source!=null) {
             val existing=state.sourceIdentities.find { it.provider==source.provider && it.scope==source.scope && it.eventKind==source.eventKind && it.externalId==source.externalId }

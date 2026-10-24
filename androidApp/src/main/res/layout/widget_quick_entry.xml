@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp" android:background="@drawable/widget_background">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DawnYew · 快捷记账" android:textColor="#123B37" android:textSize="15sp" android:textStyle="bold" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="horizontal">
+        <TextView android:id="@+id/widget_expense" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="− 支出" android:contentDescription="打开支出记账" android:textColor="#AF395A" android:textSize="16sp" />
+        <TextView android:id="@+id/widget_income" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="＋ 收入" android:contentDescription="打开收入记账" android:textColor="#006B60" android:textSize="16sp" />
+        <TextView android:id="@+id/widget_capture" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="截图记账" android:contentDescription="打开本地截图记账" android:textColor="#25436D" android:textSize="15sp" />
+    </LinearLayout>
+</LinearLayout>

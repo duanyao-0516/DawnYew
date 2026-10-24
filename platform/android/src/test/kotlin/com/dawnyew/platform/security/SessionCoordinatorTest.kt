@@ -95,4 +95,20 @@ class SessionCoordinatorTest {
         assertTrue(s.finishExternal(old)); assertFalse(s.finishExternal(old))
         val attempt = s.beginAuthentication(); assertTrue(s.finishAuthentication(attempt, true, false)); assertFalse(s.finishAuthentication(attempt, true, false))
     }
+    @Test fun revocationNotifiesDraftOwnerForLockedAndUnlockedUsersButNotValidContinuations() {
+        listOf(false,true).forEach { lock ->
+            var resets=0
+            val s=SessionCoordinator({time},"draft-owner",onRevoked={resets++})
+            s.configureLock(lock)
+            if(lock) assertTrue(s.finishAuthentication(s.beginAuthentication(),true,false))
+            s.foreground(false)
+            s.background(true);s.foreground(false);assertEquals(0,resets)
+            val picker=s.beginExternal();s.background(false);s.foreground(false)
+            assertTrue(s.finishExternal(picker));assertEquals(0,resets)
+            s.background(false);assertEquals(1,resets)
+            s.foreground(false);s.revoke();assertEquals(2,resets)
+            assertEquals(!lock,s.authorized)
+        }
+    }
+
 }

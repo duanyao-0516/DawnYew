@@ -7,8 +7,13 @@ data class LedgerEntityBatch(
     val budgets:List<MonthlyBudget> = emptyList(), val sourceIdentities:List<SourceIdentity> = emptyList(),
     val importBatches:List<ImportBatch> = emptyList(), val importMembers:List<ImportMember> = emptyList(),
     val preferences:List<UserPreference> = emptyList(),
+    val accounts:List<Account> = emptyList(), val entryDetails:List<EntryDetails> = emptyList(), val entryTags:List<EntryTag> = emptyList(),
+    val transfers:List<AccountTransfer> = emptyList(), val dimensions:List<Dimension> = emptyList(), val contacts:List<Contact> = emptyList(),
+    val obligations:List<Obligation> = emptyList(), val recurringPlans:List<RecurringPlan> = emptyList(), val recurringOccurrences:List<RecurringOccurrence> = emptyList(),
+    val savingsPlans:List<SavingsPlan> = emptyList(), val savingsMovements:List<SavingsMovement> = emptyList(), val savingsWishes:List<SavingsWish> = emptyList(),
+    val budgetAllocations:List<BudgetAllocation> = emptyList(), val budgetReallocations:List<BudgetReallocation> = emptyList(),
 )
-val ledgerEntityTypes=listOf("ledgers","categories","entries","deletionGroups","budgets","sourceIdentities","importBatches","importMembers","preferences")
+val ledgerEntityTypes=listOf("ledgers","categories","entries","deletionGroups","budgets","sourceIdentities","importBatches","importMembers","preferences","accounts","entryDetails","entryTags","transfers","dimensions","contacts","obligations","recurringPlans","recurringOccurrences","savingsPlans","savingsMovements","savingsWishes","budgetAllocations","budgetReallocations")
 
 /** Local fields only. References and aggregate constraints are checked after the candidate is complete. */
 fun validateEntityBatch(batch:LedgerEntityBatch,normalize:(String)->String=::normalizeTextNfc) {
@@ -31,11 +36,6 @@ fun validateEntityBatch(batch:LedgerEntityBatch,normalize:(String)->String=::nor
         ensure(b.status in setOf("COMMITTED","UNDONE") && b.count>=0 && b.adapterId.isNotBlank() && b.adapterVersion.isNotBlank(),"导入批次状态无效")
     }
     batch.importMembers.forEach { validateId(it.batchId);validateId(it.entryId);validateDigest(it.committedContentDigest);ensure(it.committedRevision>0 && it.state in setOf("PRESENT","REMOVED","UNDONE"),"导入成员字段无效") }
-    batch.preferences.forEach { when(it.key) {
-        "theme" -> ensure(it.value in setOf("system","dark","light"),"未知主题值")
-        "lastLedgerId" -> validateId(it.value)
-        "lastPeriod" -> validateOccurrence(it.value+"-01T00:00:00")
-        "lastBackupAt" -> validateUtc(it.value)
-        else -> invalid("未知偏好字段")
-    } }
+    batch.preferences.forEach(::validatePreference)
+    validateFinanceEntityBatch(batch,normalize)
 }

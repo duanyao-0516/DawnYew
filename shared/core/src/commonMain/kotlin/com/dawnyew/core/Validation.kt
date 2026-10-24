@@ -79,17 +79,28 @@ fun validateState(state: LedgerState, normalize: (String) -> String = ::normaliz
         val members = membersByBatch[batch.id].orEmpty()
         ensure(members.size == batch.count && members.all { if (batch.status == "UNDONE") it.state == "UNDONE" else it.state != "UNDONE" }, "导入批次成员状态不一致")
     }
-    state.preferences.forEach { preference ->
-        when (preference.key) {
-            "theme" -> ensure(preference.value in setOf("system","light","dark"), "未知主题值")
-            "lastLedgerId" -> validateId(preference.value)
-            "lastPeriod" -> validateOccurrence(preference.value + "-01T00:00:00")
-            "lastBackupAt" -> validateUtc(preference.value)
-            else -> invalid("未知偏好字段")
-        }
-    }
+    state.preferences.forEach(::validatePreference)
     state.receipts.forEach { receipt ->
         validateId(receipt.operationId); receipt.resultIds.forEach(::validateId); validateDigest(receipt.payloadDigest); validateUtc(receipt.committedAt)
         ensure(receipt.commandType.isNotBlank(), "回执类型无效")
+    }
+    validateFinanceState(state,normalize)
+}
+
+/** Shared by commands, complete state validation and bounded backup validation. */
+fun validatePreference(preference:UserPreference) {
+    fun ensure(ok:Boolean,message:String) { if(!ok) invalid(message) }
+    when(preference.key) {
+        "homePanels" -> PanelCatalog.decode(PanelSurface.HOME,preference.value)
+        "statisticsPanels" -> PanelCatalog.decode(PanelSurface.STATISTICS,preference.value)
+        "theme" -> ensure(preference.value in setOf("system","dark","light"),"未知主题值")
+        "lastLedgerId" -> validateId(preference.value)
+        "lastPeriod" -> validateOccurrence(preference.value+"-01T00:00:00")
+        "lastHomeRange" -> decodeDateRangePreference(preference.value)
+        "lastBackupAt" -> validateUtc(preference.value)
+        "amountDisplay" -> ensure(preference.value in setOf("precise","compact"),"金额显示方式无效")
+        "continueEntry" -> ensure(preference.value in setOf("true","false"),"连续记账设置无效")
+        "defaultAccountId" -> if(preference.value!="none") validateId(preference.value)
+        else -> invalid("未知偏好字段")
     }
 }

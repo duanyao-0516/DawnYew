@@ -9,17 +9,29 @@ data class CaptureDraftUi(val amount:String="",val occurrence:String="",val note
 data class TemplateUi(val name:String,val reason:String)
 val billTemplates = com.dawnyew.protocol.TemplateRegistry.templates.map { TemplateUi(it.name,it.reason) }
 interface PlatformActions {
+    val capturePlatform: CapturePlatform
     fun exportBackup(encrypted:Boolean,password:CharArray)
     fun restoreBackup(password:CharArray)
     fun chooseScreenshot()
     fun setAppLock(enabled:Boolean)
     fun clearAllData()
     fun restoreProtectionBackup()
+    fun importCsv(ledgerId:String)
+    fun exportCsv(scope:QueryScope)
+    fun requestWidget()
     fun clearProtectionBackup()
 }
 
 /** A lifecycle-owned coordinator. UI never obtains a DAO or Android type. */
 class AppController(val repository:LedgerRepository,val environment:DomainEnvironment,private val scope:CoroutineScope) {
+    val finance = FinanceController(this, scope)
+    val dashboard = DashboardController(repository, scope)
+    val recurring:RecurringCoordinator by lazy {RecurringCoordinator(this,scope)}
+    private val mutableFinancialEditorOpen=MutableStateFlow(false)
+    val financialEditorOpen:StateFlow<Boolean> = mutableFinancialEditorOpen.asStateFlow()
+    fun setFinancialEditorOpen(value:Boolean) {mutableFinancialEditorOpen.value=value}
+    private val mutableTransientGeneration = MutableStateFlow(0L)
+    val transientGeneration: StateFlow<Long> = mutableTransientGeneration.asStateFlow()
     private val mutable=MutableStateFlow(AppUiState())
     val ui:StateFlow<AppUiState> = mutable.asStateFlow()
     private val mutablePendingOperation=MutableStateFlow(repository.pendingOperation.value)
@@ -32,6 +44,12 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     val homeStatistics:StateFlow<StatisticsPageUi> = homeStatisticsCoordinator.state
     private val todayStatisticsCoordinator=StatisticsCoordinator(repository,scope)
     val todayStatistics:StateFlow<StatisticsPageUi> = todayStatisticsCoordinator.state
+    private val yearStatisticsCoordinator=StatisticsCoordinator(repository,scope)
+    val yearStatistics:StateFlow<StatisticsPageUi> = yearStatisticsCoordinator.state
+    private val budgetStatisticsCoordinator=StatisticsCoordinator(repository,scope)
+    val budgetStatistics:StateFlow<StatisticsPageUi> = budgetStatisticsCoordinator.state
+    fun loadYearStatistics(query:QueryScope,force:Boolean=false)=yearStatisticsCoordinator.load(yearlyStatisticsScope(query),force)
+    fun loadBudgetStatistics(query:QueryScope,force:Boolean=false)=budgetStatisticsCoordinator.load(homeStatisticsScope(query),force)
     fun loadStatistics(query:QueryScope,force:Boolean=false)=statisticsCoordinator.load(query,force)
     fun loadHome(query:QueryScope,today:String,force:Boolean=false) {
         homeStatisticsCoordinator.load(homeStatisticsScope(query),force)
@@ -40,15 +58,24 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     fun loadEntries(query: QueryScope, append: Boolean = false, force: Boolean = false) = paging.load(query, append, force)
     /** Called after external-result authorization is restored; supersede reads holding the old authorization. */
     fun resumeVisibleQueries() {
+        finance.refreshLoaded(force = true)
+        dashboard.refreshLoaded(force = true)
         val navigation=mutableNavigation.value
         when(navigation.page) {
             "首页" -> {
                 homeStatisticsCoordinator.load(homeStatisticsScope(navigation.homeScope),force=homeStatistics.value.loading || homeStatistics.value.error!=null)
                 todayStatisticsCoordinator.load(todayStatisticsScope(navigation.homeScope,environment.localNow().take(10)),force=todayStatistics.value.loading || todayStatistics.value.error!=null)
+                resumeBudgetQuery(homeMonthlyScope(navigation.homeScope))
             }
+            "更多" -> resumeBudgetQuery(homeMonthlyScope(navigation.homeScope))
             "明细" -> paging.load(navigation.scope,force=entries.value.loading || entries.value.error!=null)
             "统计" -> statisticsCoordinator.load(navigation.scope,force=statistics.value.loading || statistics.value.error!=null)
         }
+    }
+    /** Resume an existing monthly slot; never invent a new read or invalidate a successful cache. */
+    private fun resumeBudgetQuery(query:QueryScope) {
+        val current=budgetStatistics.value
+        if(current.scope!=null) budgetStatisticsCoordinator.load(query,force=current.loading || current.error!=null)
     }
     suspend fun queryStatistics(query: QueryScope): StatisticsView = try {
         val snapshot = repository.statistics(query)
@@ -76,7 +103,10 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
         val period=data.preferences.firstOrNull {it.key=="lastPeriod"}?.value
         val range=period?.let {runCatching {monthRange(it)}.getOrNull()} ?: monthRange(environment.localNow().take(7))
         val query=QueryScope(ledgerIds=ledger?.let {setOf(it.id)} ?: emptySet(),startDate=range.first,endDate=range.second)
-        mutableNavigation.value=UiNavigation(detailsScope=query,statisticsScope=query,homeScope=query)
+        val homeRange=data.preferences.firstOrNull {it.key=="lastHomeRange"}?.value
+            ?.let {runCatching {decodeDateRangePreference(it)}.getOrNull()}
+        val home=homeRange?.let {query.copy(startDate=it.startDate,endDate=it.endDate)} ?: query
+        mutableNavigation.value=UiNavigation(detailsScope=query,statisticsScope=query,homeScope=home)
     }
     /** Only explicit selector actions persist preferences; statistics drills and queries do not. */
     fun selectScope(value:QueryScope) {
@@ -85,8 +115,12 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
         val data=mutable.value.dataset ?: return
         if(old.ledgerIds!=value.ledgerIds) value.ledgerIds.singleOrNull()?.takeIf {id->data.ledgers.any {it.id==id && !it.archived}}?.let {queuedPreferences["lastLedgerId"]=it}
         if(old.startDate!=value.startDate || old.endDate!=value.endDate) {
-            val period=value.startDate.take(7)
-            if(runCatching {monthRange(period)}.isSuccess) queuedPreferences["lastPeriod"]=period
+            if(mutableNavigation.value.page=="首页") {
+                queuedPreferences["lastHomeRange"]=encodeDateRangePreference(DateRange(value.startDate,value.endDate))
+            } else {
+                val period=value.startDate.take(7)
+                if(runCatching {monthRange(period)}.isSuccess) queuedPreferences["lastPeriod"]=period
+            }
         }
         flushPreferences()
     }
@@ -144,10 +178,23 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
                 is EditorChange.Date -> current.copy(date=change.value)
                 is EditorChange.Time -> current.copy(time=change.value)
                 is EditorChange.Kind -> if(current.kind==EntryKind.REFUND || change.value==EntryKind.REFUND) current else current.copy(kind=change.value,categoryId=categoryFor(current.ledgerId,change.value))
-                is EditorChange.Ledger -> if(current.kind==EntryKind.REFUND) current else current.copy(ledgerId=change.value,categoryId=categoryFor(change.value,current.kind))
+                is EditorChange.Ledger -> if(current.kind==EntryKind.REFUND) current else current.copy(
+                    ledgerId=change.value,categoryId=categoryFor(change.value,current.kind),
+                    accountId=current.accountId?.takeIf { data.writableAccount(it,change.value) }
+                        ?: data.preferences.find { it.key=="defaultAccountId" }?.value?.takeIf { data.writableAccount(it,change.value) },
+                    projectId=current.projectId?.takeIf { data.writableDimension(it,change.value,DimensionKind.PROJECT) },
+                    merchantId=current.merchantId?.takeIf { data.writableDimension(it,change.value,DimensionKind.MERCHANT) },
+                    tagIds=current.tagIds.filter { data.writableDimension(it,change.value,DimensionKind.TAG) }.toSet())
                 is EditorChange.Category -> if(current.kind==EntryKind.REFUND) current else current.copy(categoryId=change.value)
                 is EditorChange.Confirmed -> if(current.duplicateCheckPending || current.duplicateCheckError!=null) current else current.copy(confirmed=change.value)
                 is EditorChange.DuplicateAcknowledged -> if(current.duplicateCheckPending || current.duplicateCheckError!=null) current else current.copy(duplicateAcknowledged=change.value)
+                is EditorChange.Account -> if(change.value==null || data.writableAccount(change.value,current.ledgerId)) current.copy(accountId=change.value) else current
+                is EditorChange.Recorded -> current.copy(recorded=change.value)
+                is EditorChange.ExcludedFromBudget -> if(current.kind==EntryKind.REFUND) current else current.copy(excludedFromBudget=change.value)
+                is EditorChange.Reconciled -> current.copy(reconciled=change.value)
+                is EditorChange.Project -> if(change.value==null || data.writableDimension(change.value,current.ledgerId,DimensionKind.PROJECT)) current.copy(projectId=change.value) else current
+                is EditorChange.Merchant -> if(change.value==null || data.writableDimension(change.value,current.ledgerId,DimensionKind.MERCHANT)) current.copy(merchantId=change.value) else current
+                is EditorChange.Tags -> current.copy(tagIds=change.value.filter { data.writableDimension(it,current.ledgerId,DimensionKind.TAG) }.toSet())
             }
             if(next==current) return@update current
             val fieldChanged=change !is EditorChange.Confirmed && change !is EditorChange.DuplicateAcknowledged
@@ -157,6 +204,26 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
             } else next.copy(dirty=true,confirmed=if(fieldChanged && next.capture!=null) false else next.confirmed)
         }
         checkId?.let {checkCaptureDuplicates(it,150)}
+    }
+    /** Associate only the exact surviving draft after this dimension has committed through the write gate. */
+    fun createEditorDimension(draftOperationId:String,value:Dimension,operationId:String,onSuccess:()->Unit={}):Job? {
+        val draft=mutableEditor.value?.takeIf {it.operationId==draftOperationId && it.ledgerId==value.ledgerId} ?: return null
+        if(value.archived || repository.state.value?.dimensions?.any {it.id==value.id}==true) return null
+        val generation=mutableTransientGeneration.value
+        return perform(Command.Finance(FinanceAction.SaveDimension(value)),operationId) {
+            val data=repository.state.value
+            if(generation==mutableTransientGeneration.value && data?.datasetId==mutable.value.dataset?.datasetId && data?.writableDimension(value.id,draft.ledgerId,value.kind)==true) {
+                mutableEditor.update {current->
+                    if(current?.operationId!=draftOperationId || current.ledgerId!=value.ledgerId) current
+                    else when(value.kind) {
+                        DimensionKind.PROJECT->current.copy(projectId=value.id)
+                        DimensionKind.MERCHANT->current.copy(merchantId=value.id)
+                        DimensionKind.TAG->current.copy(tagIds=current.tagIds+value.id)
+                    }.copy(dirty=true,confirmed=if(current.capture!=null) false else current.confirmed)
+                }
+                onSuccess()
+            }
+        }
     }
     fun retryCaptureDuplicateCheck() {
         val draft=mutableEditor.value ?: return
@@ -196,8 +263,14 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
         statisticsCoordinator.clear()
         homeStatisticsCoordinator.clear()
         todayStatisticsCoordinator.clear()
+        yearStatisticsCoordinator.clear()
+        budgetStatisticsCoordinator.clear()
     }
     fun resetTransientState() {
+        mutableTransientGeneration.update { it + 1 }
+        finance.reset()
+        dashboard.reset()
+        mutableFinancialEditorOpen.value=false
         clearEditor()
         clearQueries()
         clearQueuedPreferences()
@@ -220,9 +293,12 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     }
     init {
         scope.launch { repository.state.collect { data ->
-            if(data==null || mutable.value.dataset?.datasetId?.let {it!=data.datasetId}==true) clearQueries()
+            if(data==null || mutable.value.dataset?.datasetId?.let {it!=data.datasetId}==true) {
+                clearQueries(); finance.reset(); dashboard.reset(); mutableTransientGeneration.update { it + 1 }
+            }
             mutable.update { it.copy(dataset=data) }
             if(data!=null && navigationDatasetId!=data.datasetId) {clearQueuedPreferences();restoreNavigationPreferences(data)}
+            if(data!=null) {finance.refreshLoaded(); dashboard.refreshLoaded()}
         } }
         scope.launch { repository.pendingOperation.collect { mutablePendingOperation.value=it } }
     }
@@ -245,8 +321,10 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
         }
     }
     fun perform(command:Command,operationId:String=environment.id(),onSuccess:(List<String>)->Unit={}):Job? =
-        performOperation(command,operationId,savingPreference=false,onSuccess)
-    private fun performOperation(command:Command,operationId:String,savingPreference:Boolean,onSuccess:(List<String>)->Unit):Job? {
+        performOperation(command,operationId,savingPreference=false,onSuccess=onSuccess)
+    internal fun performAutomatic(command:Command,operationId:String,onSuccess:(List<String>)->Unit):Job? =
+        performOperation(command,operationId,savingPreference=true,verifyReceipt=true,onSuccess=onSuccess)
+    private fun performOperation(command:Command,operationId:String,savingPreference:Boolean,verifyReceipt:Boolean=false,onSuccess:(List<String>)->Unit):Job? {
         if(mutable.value.busy) return null
         val pending=mutablePendingOperation.value
         if(pending!=null && pending.operationId!=operationId) {notify("请先确认上次操作的保存结果");return null}
@@ -261,6 +339,14 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
                     return@launch
                 }
                 val committed=PendingOperationRecovery(operationId,OperationOutcome(operationId,command::class.simpleName ?: "Command",ids))
+                if(verifyReceipt) {
+                    val outcome=try {repository.lookupOperation(operationId)} catch(cancelled:CancellationException) {throw cancelled} catch(_:Exception) {null}
+                    if(outcome!=committed.outcome) {
+                        mutablePendingOperation.value=PendingOperationRecovery(operationId,outcome)
+                        notify("周期交易保存结果需要确认，请先核对上次操作")
+                        return@launch
+                    }
+                }
                 if(!savingPreference) notify("已保存")
                 try {onSuccess(ids)}
                 catch(cancelled:CancellationException) {throw cancelled}

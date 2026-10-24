@@ -38,6 +38,9 @@ fun SourceIdentity.identityKey(): List<String> = listOf(provider, scope, eventKi
 fun sameSource(a: SourceIdentity, b: SourceIdentity): Boolean = a.identityKey() == b.identityKey() &&
     a.normalizationVersion == b.normalizationVersion && a.canonicalSource == b.canonicalSource && a.sourceDigest == b.sourceDigest
 
+/** CSV exported by this dataset may map an unchanged local record without replacing its original sources. */
+fun isSameDatasetCsvIdentity(source:SourceIdentity?,entry:Entry,datasetId:String):Boolean = source!=null && source.provider=="DAWNYEW_CSV" && source.scope==datasetId && source.externalId==entry.id && source.entryId==entry.id && source.eventKind==entry.kind.name
+
 /** Local business content excludes internal audit clocks, revision, and the creation command ID. */
 fun sameImportedBusiness(a: Entry, b: Entry): Boolean = a.ledgerId == b.ledgerId && a.kind == b.kind &&
     a.amountMinor == b.amountMinor && a.categoryId == b.categoryId && a.occurrence == b.occurrence &&
@@ -97,7 +100,8 @@ internal fun commitImport(original: LedgerState, plan: ImportPlan, env: DomainEn
         if (local != null) {
             val localSources = sourcesByEntry[local.id].orEmpty()
             val sameSources = if (row.source == null) localSources.isEmpty() else localSources.size == 1 && sameSource(localSources.single(), row.source)
-            if (!sameImportedBusiness(local, e) || !sameSources) conflict("相同账单标识含不同业务内容")
+            val csvLocalMatch=isSameDatasetCsvIdentity(row.source,e,original.datasetId) && (sourceMatch==null || sameSource(sourceMatch,row.source))
+            if (!sameImportedBusiness(local, e) || !(sameSources || csvLocalMatch)) conflict("相同账单标识含不同业务内容")
             aliases[e.id] = local.id
             continue
         }
@@ -142,7 +146,7 @@ internal fun undoImport(original: LedgerState, batchId: String): Mutation {
         }) conflict("批次成员已修改或移除，无法整批撤销")
     if (original.entries.any { it.id !in ids && it.parentExpenseId in ids } ||
         original.importMembers.any { it.batchId != batch.id && it.state == "PRESENT" && it.entryId in ids }) conflict("批次已被其他记录引用，无法撤销")
-    return Mutation(original.copy(entries = original.entries.filterNot { it.id in ids }, sourceIdentities = original.sourceIdentities.filterNot { it.entryId in ids },
+    return Mutation(original.copy(entryDetails=original.entryDetails.filterNot { it.entryId in ids },entryTags=original.entryTags.filterNot { it.entryId in ids },recurringOccurrences=original.recurringOccurrences.map { if(it.entryId in ids) it.copy(entryId=null) else it },entries = original.entries.filterNot { it.id in ids }, sourceIdentities = original.sourceIdentities.filterNot { it.entryId in ids },
         importBatches = original.importBatches.map { if (it.id == batch.id) it.copy(status = "UNDONE") else it },
         importMembers = original.importMembers.map { if (it.batchId == batch.id) it.copy(state = "UNDONE") else it }), listOf(batch.id))
 }

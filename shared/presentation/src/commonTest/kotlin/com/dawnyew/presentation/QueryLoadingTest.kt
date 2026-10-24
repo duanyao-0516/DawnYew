@@ -168,6 +168,48 @@ class QueryLoadingTest {
         assertEquals(4,repo.statisticsCalls.size)
     }
 
+    @Test fun authorizationReturnRetriesAnExistingMonthlyBudgetWithoutRereadingSuccessfulPeriodSlots()=runTest {
+        val repo=Repository(data)
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        val selected=october.copy(startDate="2026-09-15",endDate="2026-10-10")
+        val monthly=homeMonthlyScope(selected)
+        controller.navigate {it.copy(homeScope=selected)}
+        controller.loadHome(selected,"2026-10-18");runCurrent()
+        repo.statisticsLocked=true
+        controller.loadBudgetStatistics(monthly);runCurrent()
+        assertNotNull(controller.budgetStatistics.value.error)
+        repo.statisticsLocked=false
+        controller.resumeVisibleQueries();runCurrent()
+        assertEquals(listOf(selected,todayStatisticsScope(selected,"2026-10-18"),monthly,monthly),repo.statisticsCalls)
+        assertEquals(selected,controller.homeStatistics.value.snapshot!!.scope)
+        assertEquals(0L,controller.homeStatistics.value.snapshot!!.budgetUsed)
+        assertEquals(monthly,controller.budgetStatistics.value.snapshot!!.scope)
+        assertEquals(1234L,controller.budgetStatistics.value.snapshot!!.budgetUsed)
+        assertNull(controller.budgetStatistics.value.error)
+        controller.resumeVisibleQueries();runCurrent()
+        controller.finance.selectTab("更多")
+        controller.resumeVisibleQueries();runCurrent()
+        assertEquals(4,repo.statisticsCalls.size)
+    }
+
+    @Test fun authorizationReturnReplacesPendingBudgetAndRejectsItsLateFailure()=runTest {
+        val repo=Repository(data)
+        val controller=AppController(repo,Environment(),backgroundScope);runCurrent()
+        controller.navigate {it.copy(homeScope=november)}
+        controller.loadHome(november,"2026-10-18");runCurrent()
+        repo.ignoreCancellation=true;repo.statisticsLocked=true;repo.statisticsGate=CompletableDeferred()
+        val old=repo.statisticsGate!!
+        controller.loadBudgetStatistics(november);runCurrent()
+        assertTrue(controller.budgetStatistics.value.loading)
+        repo.statisticsLocked=false;repo.statisticsGate=null
+        controller.resumeVisibleQueries();runCurrent()
+        old.complete(Unit);runCurrent()
+        assertFalse(controller.budgetStatistics.value.loading)
+        assertNull(controller.budgetStatistics.value.error)
+        assertEquals(november,controller.budgetStatistics.value.snapshot!!.scope)
+        assertEquals(listOf(november,todayStatisticsScope(november,"2026-10-18"),november,november),repo.statisticsCalls)
+    }
+
     @Test fun replacingResettingOrClosingTheDatasetClearsBothHomeResultsAndCaches()=runTest {
         val repo=Repository(data)
         val controller=AppController(repo,Environment(),backgroundScope);runCurrent()

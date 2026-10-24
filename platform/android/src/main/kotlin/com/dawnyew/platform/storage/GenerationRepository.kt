@@ -270,6 +270,21 @@ class GenerationRepository internal constructor(
     override suspend fun queryEntryPage(scope: QueryScope, cursor: EntryCursor?, limit: Int): EntryPage = withContext(Dispatchers.IO) { mutex.withLock {
         checkAuthorized(); requireReady().queryEntryPage(scope, cursor, limit)
     } }
+    override suspend fun queryActivityPage(scope:ActivityScope,cursor:ActivityCursor?,limit:Int):ActivityPage = withContext(Dispatchers.IO) { mutex.withLock {
+        checkAuthorized();requireReady().queryActivityPage(scope,cursor,limit)
+    } }
+    override suspend fun activitySummary(scope:ActivityScope):ActivitySummary = withContext(Dispatchers.IO) { mutex.withLock {
+        checkAuthorized();requireReady().activitySummary(scope)
+    } }
+    override suspend fun financeSnapshot(ledgerIds:Set<String>):FinanceSnapshot = withContext(Dispatchers.IO) { mutex.withLock {
+        checkAuthorized();requireReady().financeSnapshot(ledgerIds)
+    } }
+    override suspend fun panelStatistics(request:PanelRequest):PanelStatistics = withContext(Dispatchers.IO) { mutex.withLock {
+        checkAuthorized();requireReady().panelStatistics(request)
+    } }
+    override suspend fun accountHistory(request:AccountHistoryRequest):AccountHistorySnapshot = withContext(Dispatchers.IO) { mutex.withLock {
+        checkAuthorized();requireReady().accountHistory(request)
+    } }
     override suspend fun statistics(scope: QueryScope): StatisticsSnapshot = withContext(Dispatchers.IO) { mutex.withLock {
         checkAuthorized(); requireReady().statistics(scope)
     } }
@@ -355,7 +370,7 @@ class GenerationRepository internal constructor(
                     currentCoroutineContext().ensureActive(); ensureSpace(8L * 1024 * 1024); stage(BackupProtocol.decodeRecords(type, records))
                 }
             }
-            if (summary.counts != prepared.metadata.counts) throw IOException("候选数据库计数与已验证清单不一致")
+            if (summary.counts != prepared.expectedCandidateCounts) throw IOException("候选数据库计数与已验证清单不一致")
             database.close(); database = null; files.syncDirectory(directory)
             VerifiedCandidate(summary, baseline, name, ownerId)
         } catch (error: Throwable) {

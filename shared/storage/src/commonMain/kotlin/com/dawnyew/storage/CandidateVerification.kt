@@ -35,7 +35,7 @@ internal suspend fun inspectCandidate(connection:Transactor):CandidateSummary {
             size
         }
         counts[type]=count;hash.update(("$type\n$count\n").encodeToByteArray())
-        val keys=when(type) { "budgets"->listOf("ledgerId","yearMonth");"importMembers"->listOf("batchId","entryId");"preferences"->listOf("key");else->listOf("id") }
+        val keys=entityKeyColumns(type)
         var cursor:List<String>?=null
         var visited=0L
         while(true) {
@@ -105,5 +105,5 @@ private fun recordColumns(type:String,payload:String):Map<String,Any?> = when(ty
         mapOf("batchId" to it.batchId,"entryId" to it.entryId,"liveEntryId" to it.entryId.takeIf { _->it.state=="PRESENT" },"memberState" to it.state)
     }
     "preferences"->readRecord<UserPreference>(payload) { validateEntityBatch(LedgerEntityBatch(preferences=listOf(it))) }.let { mapOf("key" to it.key) }
-    else->invalid("未知候选实体")
+    else->financialRecordColumns(type,payload)
 }
