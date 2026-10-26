@@ -2,7 +2,8 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@android:color/white" />
     <foreground>
-        <!-- Keep the supplied tree inside the safe area of round and squircle masks. -->
-        <inset android:drawable="@drawable/dawnyew_logo" android:inset="8%" />
+        <!-- Map the entire supplied image into the 72dp viewport of the 108dp layer.
+             The outer 18dp per side is system overscan, not the image's own whitespace. -->
+        <inset android:drawable="@drawable/dawnyew_logo" android:inset="16.6667%" />
     </foreground>
 </adaptive-icon>
