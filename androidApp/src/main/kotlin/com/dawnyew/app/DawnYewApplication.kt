@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 import com.dawnyew.app.capture.CaptureRuntime
 import com.dawnyew.app.capture.ScreenCaptureService
+import com.dawnyew.app.capture.FloatingCaptureAccessibilityService
+import com.dawnyew.app.capture.FloatingCaptureWorkflow
 
 /** A picker continuation is process-only and contains no Activity or view references. */
 data class PendingExternal(val type: String, val lease: SessionCoordinator.Lease, val databaseEpoch: Long, val file: File? = null,
@@ -31,6 +33,7 @@ class DawnYewApplication : Application() {
     lateinit var repository: GenerationRepository; private set
     lateinit var controller: AppController; private set
     lateinit var session: SessionCoordinator; private set
+    internal val floatingCapture by lazy { FloatingCaptureWorkflow(this) }
     private var externalExpiry: Job? = null
     var pendingExternal: PendingExternal? = null
         set(value) {
@@ -43,6 +46,7 @@ class DawnYewApplication : Application() {
     val sessionRevocations = MutableStateFlow(0L)
     val startupError = MutableStateFlow<String?>(null)
     var pendingCapture: PendingCaptureDelivery? = null
+    internal var pendingFloatingAction: com.dawnyew.app.capture.FloatingCaptureAction? = null
     private var initializing = false
     private var startupStagingNeedsCleanup = false
     override fun onCreate() {
@@ -61,7 +65,9 @@ class DawnYewApplication : Application() {
         ContextCompat.registerReceiver(this, object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) { if (intent?.action == Intent.ACTION_SCREEN_OFF) {
                 com.dawnyew.app.capture.CaptureActionRuntime.clear()
-                CaptureRuntime.clear(this@DawnYewApplication); pendingCapture = null
+                CaptureRuntime.clear(this@DawnYewApplication); pendingCapture = null; pendingFloatingAction = null
+                floatingCapture.cancelPending()
+                FloatingCaptureAccessibilityService.dismissPending()
                 stopService(Intent(this@DawnYewApplication, ScreenCaptureService::class.java))
                 revokeSession()
             } }
@@ -93,6 +99,14 @@ class DawnYewApplication : Application() {
             catch (e: Exception) { startupError.value = "本地数据暂时无法打开。为保护数据，未创建空账本覆盖。${e.message.orEmpty()}" }
             finally { initializing = false }
         }
+    }
+    /** Background callers obey the same startup protection boundary as the Activity. */
+    internal suspend fun awaitReady() {
+        check(!startupStagingNeedsCleanup && startupError.value == null) {
+            "本地数据需要恢复检查，请打开 DawnYew 按提示重试"
+        }
+        repository.initialize()
+        check(!startupStagingNeedsCleanup && startupError.value == null) { "本地数据暂不可用，请打开 DawnYew 重试" }
     }
     fun recovered() { if (!startupStagingNeedsCleanup) startupError.value = null }
 }

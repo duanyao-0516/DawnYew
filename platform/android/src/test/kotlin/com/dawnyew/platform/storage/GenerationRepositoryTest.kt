@@ -145,6 +145,64 @@ class GenerationRepositoryTest {
             assertEquals(1,f.financeSnapshotReads)
         } finally {f.close()}
     }
+    @Test fun generationScopeRejectsSameDatasetReplacementBeforeExecuting() = runBlocking {
+        val f = Fixture()
+        try {
+            f.repository.initialize()
+            val before = f.repository.snapshot()
+            val oldEpoch = f.repository.epoch
+            val scoped = f.repository.inGeneration(oldEpoch)
+            assertEquals(before, scoped.snapshot())
+            f.repository.replace(before)
+            assertEquals(before.datasetId, f.repository.snapshot().datasetId)
+            assertNotEquals(oldEpoch, f.repository.epoch)
+            assertFailsWith<DomainException> { scoped.execute(Command.CreateLedger("must not appear"), f.env.id()) }
+            assertEquals(before, f.repository.snapshot())
+            assertFalse(File(f.root, "pending-operation").exists())
+            assertFailsWith<DomainException> { scoped.snapshot() }
+            Unit
+        } finally { f.close() }
+    }
+
+    @Test fun staleGenerationCannotReadReceiptOrClearNewGenerationPendingMarker() = runBlocking {
+        val f = Fixture()
+        try {
+            f.repository.initialize()
+            val scoped = f.repository.inGeneration(f.repository.epoch)
+            val before = f.repository.snapshot()
+            f.repository.replace(before)
+            val operationId = f.env.id()
+            f.repository.execute(Command.CreateLedger("new generation write"), operationId)
+            assertEquals(operationId, File(f.root, "pending-operation").readText())
+            assertFailsWith<DomainException> { scoped.lookupOperation(operationId) }
+            assertFailsWith<DomainException> { scoped.acknowledgeOperation(operationId) }
+            assertEquals(operationId, File(f.root, "pending-operation").readText())
+            val current = f.repository.inGeneration(f.repository.epoch)
+            assertNotNull(current.lookupOperation(operationId))
+            current.acknowledgeOperation(operationId)
+            assertFalse(File(f.root, "pending-operation").exists())
+        } finally { f.close() }
+    }
+
+    @Test fun generationScopePreservesAuthorizationAndSerialQueryDelegation() = runBlocking {
+        val f = Fixture()
+        try {
+            f.repository.initialize()
+            val scoped = f.repository.inGeneration(f.repository.epoch)
+            val operationId = f.env.id()
+            assertEquals(1, scoped.execute(Command.CreateLedger("scoped"), operationId).size)
+            assertNotNull(scoped.lookupOperation(operationId))
+            scoped.acknowledgeOperation(operationId)
+            scoped.queryActivityPage(ActivityScope())
+            assertEquals(1, f.activityPageReads)
+            f.authorized = false
+            assertFailsWith<DomainException> { scoped.snapshot() }
+            assertFailsWith<DomainException> { scoped.execute(Command.CreateLedger("locked"), f.env.id()) }
+            assertFailsWith<DomainException> { scoped.lookupOperation(operationId) }
+            assertFailsWith<DomainException> { scoped.acknowledgeOperation(operationId) }
+            Unit
+        } finally { f.close() }
+    }
     @Test fun dashboardQueriesUseAuthorizedGenerationDelegates() = runBlocking {
         val f = Fixture()
         try {

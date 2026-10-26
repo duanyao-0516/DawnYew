@@ -15,7 +15,27 @@ import com.dawnyew.presentation.CapturePlatform
     val state by platform.state.collectAsState()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SettingsSection {
-            SettingsText("三种记账方式", "截屏、系统截图监听和分享图片都在本机识别；核对金额、日期及分类后再保存。")
+            SettingsText("本机截图记账", "点击全局悬浮球即可识别并记账，也可使用截屏快捷按钮、系统截图监听或分享图片。截图仅在本机处理。")
+        }
+        SettingsSection("全局悬浮记账") {
+            SettingItem("显示悬浮球", "在其他 App 看到账单时点一下悬浮球，即可截取当前画面并离线识别。拖动可调整位置。",
+                onClick = { platform.setFloatingCapture(!state.floatingEnabled) }, trailing = {
+                    CompactFinanceSwitch(state.floatingEnabled, platform::setFloatingCapture, modifier = Modifier.semantics { contentDescription = "全局悬浮记账开关" })
+                })
+            SettingsDivider()
+            SettingItem("保存前确认一次", "默认识别后直接保存；开启后先显示全局确认面板，可调整金额和收支方向再保存。",
+                onClick = { platform.setFloatingConfirmation(!state.floatingConfirmBeforeSave) }, trailing = {
+                    CompactFinanceSwitch(state.floatingConfirmBeforeSave, platform::setFloatingConfirmation, modifier = Modifier.semantics { contentDescription = "悬浮记账保存前确认开关" })
+                })
+            SettingsDivider()
+            SettingItem("悬浮记账权限", "需要记账结果通知及系统无障碍截屏授权", value = if (state.floatingConnected) "已连接" else "设置", onClick = platform::requestFloatingPermissions)
+            SettingsText("使用说明", "仅点击时截取一张画面，不读取界面节点、不代替操作其他 App。缺少日期时采用截图时间，账本与分类使用默认选择；保存后可从通知查看、修改或撤销。启用应用锁时先解锁账本，再继续入账。")
+            SettingsText("运行状态", when {
+                !state.floatingEnabled -> "未开启。打开开关并完成系统授权后，悬浮球才会显示。"
+                state.floatingMessage != null -> state.floatingMessage.orEmpty()
+                state.floatingConnected -> "悬浮球已连接，可切换到目标 App 点击记账。锁屏时自动隐藏。"
+                else -> "等待系统无障碍服务连接，请完成系统授权。"
+            })
         }
         SettingsSection("截屏记账") {
             SettingItem("添加截屏记账按钮", "下拉通知栏点「截屏记账」，授权后截取当前页面，不在相册留下截图。", value = if (state.screenTileAdded) "已添加" else "添加", onClick = { platform.requestTile(false) })

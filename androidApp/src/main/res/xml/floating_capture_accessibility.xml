@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:description="@string/floating_capture_service_description"
+    android:canRetrieveWindowContent="false"
+    android:canTakeScreenshot="true"
+    android:canPerformGestures="false"
+    android:isAccessibilityTool="false"
+    android:settingsActivity="com.dawnyew.app.MainActivity" />

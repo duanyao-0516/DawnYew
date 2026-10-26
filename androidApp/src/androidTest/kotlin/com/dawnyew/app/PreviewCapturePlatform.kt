@@ -10,4 +10,7 @@ internal object PreviewCapturePlatform : CapturePlatform {
     override fun setAutomaticCapture(enabled: Boolean): Unit = error("Not part of rendering fixture")
     override fun requestTile(automatic: Boolean): Unit = error("Not part of rendering fixture")
     override fun openAppSettings(): Unit = error("Not part of rendering fixture")
+    override fun setFloatingCapture(enabled: Boolean): Unit = error("Not part of rendering fixture")
+    override fun setFloatingConfirmation(enabled: Boolean): Unit = error("Not part of rendering fixture")
+    override fun requestFloatingPermissions(): Unit = error("Not part of rendering fixture")
 }

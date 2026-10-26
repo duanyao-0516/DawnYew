@@ -5,7 +5,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 data class AppUiState(val dataset:LedgerState?=null,val busy:Boolean=false,val message:String?=null,val savingPreference:Boolean=false)
-data class CaptureDraftUi(val amount:String="",val occurrence:String="",val note:String="",val warnings:List<String> = emptyList(),val supported:Boolean=true,val engineVersion:String?=null,val fingerprint:String?=null,val duplicateWarning:Boolean=false)
+data class CaptureDraftUi(val amount:String="",val occurrence:String="",val note:String="",val warnings:List<String> = emptyList(),val supported:Boolean=true,val engineVersion:String?=null,val fingerprint:String?=null,val duplicateWarning:Boolean=false,val direction:Direction?=null)
 data class TemplateUi(val name:String,val reason:String)
 val billTemplates = com.dawnyew.protocol.TemplateRegistry.templates.map { TemplateUi(it.name,it.reason) }
 interface PlatformActions {

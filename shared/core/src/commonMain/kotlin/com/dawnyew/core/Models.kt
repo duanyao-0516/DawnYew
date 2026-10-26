@@ -1,6 +1,7 @@
 package com.dawnyew.core
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import kotlinx.coroutines.flow.StateFlow
 
 @Serializable enum class Direction { EXPENSE, INCOME }
@@ -47,6 +48,15 @@ import kotlinx.coroutines.flow.StateFlow
     @Serializable data class SaveCategory(val ledgerId: String, val direction: Direction, val name: String, val id: String? = null, val enabled: Boolean = true, val sortOrder: Int = 0) : Command
     @Serializable data class DeleteCategory(val id: String) : Command
     @Serializable data class SaveEntry(val id: String? = null, val ledgerId: String, val kind: EntryKind, val amountMinor: Long, val categoryId: String, val occurrence: String, val note: String, val expectedRevision: Long? = null, val originKind: OriginKind = OriginKind.MANUAL, val captureFingerprint: String? = null, val captureEngineVersion: String? = null, val details:EntryDetails? = null, val tagIds:List<String>? = null) : Command
+    /** Defaults and same-image deduplication are resolved together inside the writer transaction. */
+    @Serializable @SerialName("RecordCapture") data class RecordCapture(
+        val datasetId: String, val amountMinor: Long, val direction: Direction, val capturedAt: String,
+        val fingerprint: String, val engineVersion: String, val occurrence: String? = null,
+        val note: String = "", val ledgerId: String? = null, val categoryId: String? = null,
+    ) : Command
+    @Serializable @SerialName("UndoCapture") data class UndoCapture(
+        val datasetId: String, val entryId: String, val creationOperationId: String, val expectedRevision: Long,
+    ) : Command
     @Serializable data class AddRefund(val expenseId: String, val amountMinor: Long, val occurrence: String, val note: String, val details:EntryDetails? = null, val tagIds:List<String>? = null) : Command
     @Serializable data class MoveEntry(val id: String, val ledgerId: String, val categoryId: String) : Command
     @Serializable data class SoftDelete(val id: String) : Command

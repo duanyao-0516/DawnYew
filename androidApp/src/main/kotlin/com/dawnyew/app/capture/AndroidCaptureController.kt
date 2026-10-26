@@ -1,6 +1,8 @@
 package com.dawnyew.app.capture
 
 import android.Manifest
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.AlertDialog
 import android.app.StatusBarManager
 import android.content.ComponentName
 import android.content.Intent
@@ -8,9 +10,13 @@ import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.dawnyew.app.DawnYewApplication
 import com.dawnyew.app.R
 import com.dawnyew.presentation.CapturePlatform
 import kotlinx.coroutines.flow.update
@@ -22,6 +28,31 @@ internal class AndroidCaptureController(
 ) : CapturePlatform {
     override val state = CaptureRuntime.settings
     private var enableAfterPermission = false
+    private val floatingPreferences by lazy { FloatingCapturePreferences(activity) }
+    private var resumeFloatingPermissions = false
+    private var floatingSettingsDestination: FloatingSettingsDestination? = null
+    private var floatingDisclosure: AlertDialog? = null
+    private val floatingNotificationPermission = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        resumeFloatingPermissions = granted && floatingPreferences.enabled
+        if (!granted) FloatingCaptureRuntime.message.value = "尚未允许通知。开启后才能通过结果通知查看、修改或撤销记账。"
+        refresh()
+    }
+    private val floatingSettings = activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val destination = floatingSettingsDestination
+        floatingSettingsDestination = null
+        if (destination == FloatingSettingsDestination.NOTIFICATIONS && floatingPreferences.enabled) {
+            resumeFloatingPermissions = FloatingCaptureNotifications.canNotify(activity)
+            if (!resumeFloatingPermissions) FloatingCaptureRuntime.message.value = "记账结果通知仍未开启，请在系统设置中允许通知和「悬浮记账结果」渠道。"
+        } else if (destination == FloatingSettingsDestination.ACCESSIBILITY) {
+            FloatingCaptureRuntime.message.value = when {
+                !floatingPreferences.enabled -> null
+                !accessibilityEnabled() -> "尚未启用无障碍服务，请在系统设置中打开「DawnYew 悬浮记账」。"
+                !FloatingCaptureRuntime.connected.value -> "授权已开启，正在等待系统连接悬浮记账服务。"
+                else -> null
+            }
+        }
+        refresh()
+    }
     private val permissionRequest = activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (enableAfterPermission && !CapturePermissions.canObserve(activity)) {
             enableAfterPermission = false
@@ -30,7 +61,17 @@ internal class AndroidCaptureController(
         refresh()
     }
 
+    init {
+        activity.lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_DESTROY) { floatingDisclosure?.dismiss(); floatingDisclosure = null }
+        })
+    }
+
     fun refresh() {
+        FloatingCaptureNotifications.ensureChannels(activity)
+        if (FloatingCaptureRuntime.connected.value && FloatingCaptureNotifications.canNotify(activity) &&
+            FloatingCaptureRuntime.message.value == "授权已开启，正在等待系统连接悬浮记账服务。") FloatingCaptureRuntime.message.value = null
+        FloatingCaptureRuntime.refresh(activity)
         val prefs = activity.getSharedPreferences(TILE_PREFERENCES, 0)
         state.update { it.copy(
             mediaPermission = CapturePermissions.hasMedia(activity),
@@ -44,8 +85,102 @@ internal class AndroidCaptureController(
                 enableAfterPermission = false
                 startAutomatic()
             }
+            if (resumeFloatingPermissions) {
+                resumeFloatingPermissions = false
+                if (floatingPreferences.enabled) advanceFloatingPermissions()
+            }
         }
     }
+
+    override fun setFloatingCapture(enabled: Boolean) {
+        if (!canUse()) return
+        floatingPreferences.enabled = enabled
+        FloatingCaptureRuntime.message.value = null
+        if (!enabled) {
+            resumeFloatingPermissions = false
+            floatingSettingsDestination = null
+            floatingDisclosure?.dismiss(); floatingDisclosure = null
+            (activity.application as DawnYewApplication).floatingCapture.cancelPending()
+            FloatingCaptureAccessibilityService.dismissPending()
+            refresh()
+        } else {
+            requestFloatingPermissions()
+        }
+    }
+
+    override fun setFloatingConfirmation(enabled: Boolean) {
+        if (!canUse()) return
+        floatingPreferences.confirmBeforeSave = enabled
+        refresh()
+    }
+
+    override fun requestFloatingPermissions() {
+        if (!canUse()) return
+        FloatingCaptureNotifications.ensureChannels(activity)
+        FloatingCaptureRuntime.message.value = null
+        advanceFloatingPermissions()
+        FloatingCaptureRuntime.refresh(activity)
+    }
+
+    private fun advanceFloatingPermissions() {
+        if (!canUse() || floatingSettingsDestination != null || floatingDisclosure != null) return
+        when {
+            !CapturePermissions.hasNotificationRuntimePermission(activity) -> {
+                val askedBefore = floatingPreferences.storage.getBoolean("notification_prompt_seen", false)
+                if (askedBefore && !activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                    openFloatingSettings(FloatingSettingsDestination.NOTIFICATIONS,
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName))
+                } else {
+                    floatingPreferences.storage.edit().putBoolean("notification_prompt_seen", true).apply()
+                    floatingNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+            !FloatingCaptureNotifications.canNotify(activity) -> {
+                FloatingCaptureRuntime.message.value = "请允许通知及「悬浮记账结果」渠道；记账成功后可从通知查看、修改和撤销。"
+                openFloatingSettings(FloatingSettingsDestination.NOTIFICATIONS,
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName))
+            }
+            !accessibilityEnabled() -> showFloatingDisclosure()
+            else -> {
+                FloatingCaptureRuntime.message.value = if (FloatingCaptureRuntime.connected.value) null else "授权已开启，正在等待系统连接悬浮记账服务。"
+                FloatingCaptureRuntime.refresh(activity)
+            }
+        }
+    }
+
+    private fun accessibilityEnabled(): Boolean {
+        val component = ComponentName(activity, FloatingCaptureAccessibilityService::class.java)
+        return activity.getSystemService(AccessibilityManager::class.java)
+            .getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            .any { info -> info.resolveInfo.serviceInfo.let { ComponentName(it.packageName, it.name) == component } }
+    }
+
+    private fun showFloatingDisclosure() {
+        if (floatingDisclosure != null) return
+        floatingDisclosure = AlertDialog.Builder(activity)
+            .setTitle(R.string.floating_capture_permission_title)
+            .setMessage(R.string.floating_capture_permission_explanation)
+            .setNegativeButton("暂不开启", null)
+            .setPositiveButton("前往系统授权") { _, _ ->
+                if (canUse()) openFloatingSettings(FloatingSettingsDestination.ACCESSIBILITY, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            .create().also { dialog ->
+                dialog.setOnDismissListener { if (floatingDisclosure === dialog) floatingDisclosure = null }
+                dialog.show()
+            }
+    }
+
+    private fun openFloatingSettings(destination: FloatingSettingsDestination, intent: Intent) {
+        floatingSettingsDestination = destination
+        try { floatingSettings.launch(intent) }
+        catch (_: RuntimeException) {
+            floatingSettingsDestination = null
+            FloatingCaptureRuntime.message.value = "系统设置暂时无法打开，请从手机设置进入 DawnYew 的通知或无障碍权限。"
+            FloatingCaptureRuntime.refresh(activity)
+        }
+    }
+
+    private enum class FloatingSettingsDestination { NOTIFICATIONS, ACCESSIBILITY }
 
     override fun setAutomaticCapture(enabled: Boolean) {
         if (!canUse()) return

@@ -56,7 +56,7 @@ internal object CaptureRecognizer {
             note = value.merchant.orEmpty(), warnings = value.messages + listOfNotNull(
                 if (occurrence.isEmpty()) "未识别出完整时间，暂填当前时间，请核对后修改。" else null,
                 if (value.amountCandidates.size > 1) "候选金额：" + value.amountCandidates.joinToString { Money.format(it) } else null,
-            ), engineVersion = result.engineVersion, fingerprint = fingerprint,
+            ), engineVersion = result.engineVersion, fingerprint = fingerprint, direction = value.direction,
         ), "")
     }
 }

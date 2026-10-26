@@ -73,6 +73,9 @@ class GenerationRepository internal constructor(
     private fun readPointer(file: File): String? = if (file.exists()) checkName(file.readText().trim()) else null
     private fun open(name: String) = openGeneration(checkName(name))
     private fun checkAuthorized() { if (!authorized()) throw DomainException(ErrorCode.LOCKED, "应用已锁定，请重新认证") }
+    private fun checkGeneration(expectedEpoch: Long?) {
+        if (expectedEpoch != null && expectedEpoch != epoch) conflict("数据集已切换，请重新操作")
+    }
     private fun requireReady() = delegate ?: throw IOException("数据库尚未就绪，请重新验证当前数据或恢复保护副本")
     private suspend fun failClosed(error: Throwable, other: LedgerRepository? = null) {
         val previous = delegate
@@ -202,11 +205,13 @@ class GenerationRepository internal constructor(
         pending.value = readPendingId()?.let { PendingOperationRecovery(it, requireReady().lookupOperation(it)) }
     }
     private fun clearPending() { files.remove(pendingFile); files.syncDirectory(root); pending.value = null }
-    override suspend fun lookupOperation(operationId: String): OperationOutcome? = withContext(Dispatchers.IO) { mutex.withLock {
-        checkAuthorized(); validateId(operationId); requireReady().lookupOperation(operationId)
-    } }
-    override suspend fun acknowledgeOperation(operationId: String) = withContext(Dispatchers.IO) { mutex.withLock {
-        checkAuthorized(); validateId(operationId)
+    override suspend fun lookupOperation(operationId: String): OperationOutcome? = lookupOperationInGeneration(operationId, null)
+    private suspend fun lookupOperationInGeneration(operationId: String, expectedEpoch: Long?): OperationOutcome? = readInGeneration(expectedEpoch) {
+        validateId(operationId); it.lookupOperation(operationId)
+    }
+    override suspend fun acknowledgeOperation(operationId: String) = acknowledgeOperationInGeneration(operationId, null)
+    private suspend fun acknowledgeOperationInGeneration(operationId: String, expectedEpoch: Long?) = withContext(Dispatchers.IO) { mutex.withLock {
+        checkAuthorized(); checkGeneration(expectedEpoch); validateId(operationId)
         if (readPendingId() == operationId) {
             try { clearPending() }
             catch (error: Throwable) { runCatching { refreshPending() }; throw error }
@@ -214,9 +219,12 @@ class GenerationRepository internal constructor(
     } }
     override suspend fun execute(command: Command, operationId: String, expectedVersion: Long?): List<String> {
         val requestedEpoch = epoch
+        return executeInGeneration(command, operationId, requestedEpoch, expectedVersion)
+    }
+    /** The caller's generation is checked under the same mutex as receipt and database writes. */
+    suspend fun executeInGeneration(command: Command, operationId: String, expectedEpoch: Long, expectedVersion: Long? = null): List<String> {
         return withContext(Dispatchers.IO) { mutex.withLock {
-            checkAuthorized(); validateId(operationId)
-            if (requestedEpoch != epoch) conflict("数据集已切换，请重新操作")
+            checkAuthorized(); checkGeneration(expectedEpoch); validateId(operationId)
             val repo = requireReady()
             val previous = readPendingId()
             if (previous != null && previous != operationId) {
@@ -267,6 +275,38 @@ class GenerationRepository internal constructor(
             }
         } }
     }
+    /**
+     * An operation view of an already opened generation. It cannot initialize, replace or close
+     * the owner's database. State flows remain live owner signals; use snapshot() for a bound read.
+     * Every operation, including receipt acknowledgement, checks its generation under the mutex.
+     */
+    fun inGeneration(expectedEpoch: Long): LedgerRepository = object : LedgerRepository {
+        override val state = this@GenerationRepository.state
+        override val pendingOperation = this@GenerationRepository.pendingOperation
+        override suspend fun initialize() { readInGeneration(expectedEpoch) { Unit } }
+        override suspend fun execute(command: Command, operationId: String, expectedVersion: Long?) =
+            executeInGeneration(command, operationId, expectedEpoch, expectedVersion)
+        override suspend fun lookupOperation(operationId: String) = lookupOperationInGeneration(operationId, expectedEpoch)
+        override suspend fun acknowledgeOperation(operationId: String) = acknowledgeOperationInGeneration(operationId, expectedEpoch)
+        override suspend fun snapshot() = readInGeneration(expectedEpoch) { it.snapshot() }
+        override suspend fun queryEntryPage(scope: QueryScope, cursor: EntryCursor?, limit: Int) =
+            readInGeneration(expectedEpoch) { it.queryEntryPage(scope, cursor, limit) }
+        override suspend fun queryActivityPage(scope: ActivityScope, cursor: ActivityCursor?, limit: Int) =
+            readInGeneration(expectedEpoch) { it.queryActivityPage(scope, cursor, limit) }
+        override suspend fun activitySummary(scope: ActivityScope) = readInGeneration(expectedEpoch) { it.activitySummary(scope) }
+        override suspend fun financeSnapshot(ledgerIds: Set<String>) = readInGeneration(expectedEpoch) { it.financeSnapshot(ledgerIds) }
+        override suspend fun panelStatistics(request: PanelRequest) = readInGeneration(expectedEpoch) { it.panelStatistics(request) }
+        override suspend fun accountHistory(request: AccountHistoryRequest) = readInGeneration(expectedEpoch) { it.accountHistory(request) }
+        override suspend fun statistics(scope: QueryScope) = readInGeneration(expectedEpoch) { it.statistics(scope) }
+        override suspend fun findCaptureDuplicates(fingerprint: String?, amountMinor: Long?, localDate: String?) =
+            readInGeneration(expectedEpoch) { it.findCaptureDuplicates(fingerprint, amountMinor, localDate) }
+        override suspend fun replace(state: LedgerState): Unit = throw DomainException(ErrorCode.UNSUPPORTED, "请通过数据集管理入口恢复数据")
+        override suspend fun close() = Unit // This view owns no resources; only its owner closes generations.
+    }
+    private suspend fun <T> readInGeneration(expectedEpoch: Long?, read: suspend (LedgerRepository) -> T): T =
+        withContext(Dispatchers.IO) { mutex.withLock {
+            checkAuthorized(); checkGeneration(expectedEpoch); read(requireReady())
+        } }
     override suspend fun queryEntryPage(scope: QueryScope, cursor: EntryCursor?, limit: Int): EntryPage = withContext(Dispatchers.IO) { mutex.withLock {
         checkAuthorized(); requireReady().queryEntryPage(scope, cursor, limit)
     } }

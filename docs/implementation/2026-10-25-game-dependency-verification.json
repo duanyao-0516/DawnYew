@@ -1,0 +1,233 @@
+[
+  {
+    "coordinate": "androidx.activity:activity:1.7.0",
+    "artifact": "activity-1.7.0.aar",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/activity/activity/1.7.0/activity-1.7.0.aar",
+    "sha256": "e44b2032273387156982912c591ef7e2dd485ba0b2e689b528b5a42f271a4f27",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.activity:activity-ktx:1.7.0",
+    "artifact": "activity-ktx-1.7.0.aar",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/activity/activity-ktx/1.7.0/activity-ktx-1.7.0.aar",
+    "sha256": "fce317d61a22f12967b475bfcb80c89dda66e418975e890ea703cb74e12b5b11",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.annotation:annotation-jvm:1.7.0-beta01",
+    "artifact": "annotation-jvm-1.7.0-beta01.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/annotation/annotation-jvm/1.7.0-beta01/annotation-jvm-1.7.0-beta01.module",
+    "sha256": "61514762e567b50287f2d8792698a5f46eb9a73a4b336f0e4e25dbd7a9c980dd",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.compose.animation:animation-core:1.2.1",
+    "artifact": "animation-core-1.2.1.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-core/1.2.1/animation-core-1.2.1.module",
+    "sha256": "9083ac53ad162f4167ecfb895469943504f4cd6a624e612936a5209144c5b6bf",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.compose.runtime:runtime-saveable:1.0.1",
+    "artifact": "runtime-saveable-1.0.1.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-saveable/1.0.1/runtime-saveable-1.0.1.module",
+    "sha256": "c0d6f142542d8d74f65481ef6526d2be265f01f812a112948fcde87a458f4fb6",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.compose.ui:ui-graphics:1.9.3",
+    "artifact": "ui-graphics-1.9.3.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-graphics/1.9.3/ui-graphics-1.9.3.module",
+    "sha256": "cb655b56d9533c4fb048fd5c031e4f9f6ab1b07663b7fce7ed8d51afc7092e04",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.compose.ui:ui-graphics-android:1.9.3",
+    "artifact": "ui-graphics-android-1.9.3.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-graphics-android/1.9.3/ui-graphics-android-1.9.3.module",
+    "sha256": "895cbd5f37801ab59fe4d18f5bb9787d8ef8a7998f6f4d785f0c15e0b02844c6",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.compose.ui:ui-text:1.9.3",
+    "artifact": "ui-text-1.9.3.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-text/1.9.3/ui-text-1.9.3.module",
+    "sha256": "13ec9a6ec9e0812eb9ed7588d75d096c6196205df728bdbb623a2f5edd2b6f13",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.compose.ui:ui-text-android:1.8.1",
+    "artifact": "ui-text-android-1.8.1.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-text-android/1.8.1/ui-text-android-1.8.1.module",
+    "sha256": "19cb30290665340aa3d3999d13433d8755c498b858f798ccf2ecab638b5b523a",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.compose.ui:ui-unit:1.9.3",
+    "artifact": "ui-unit-1.9.3.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-unit/1.9.3/ui-unit-1.9.3.module",
+    "sha256": "fc032a7c14768b7d672b2ead94c95af41add775da736c210365634b512e81297",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.core:core-ktx:1.1.0",
+    "artifact": "core-ktx-1.1.0.pom",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/1.1.0/core-ktx-1.1.0.pom",
+    "sha256": "729d11bad16d87c6212dc9ab80e9c770d333115062136e0732164a6b1696e11c",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.emoji2:emoji2:1.2.0",
+    "artifact": "emoji2-1.2.0.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/emoji2/emoji2/1.2.0/emoji2-1.2.0.module",
+    "sha256": "9d1996cca03777baa1f27cd15531db983a633dae37b90f85bd53501acb56699d",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-common:2.9.4",
+    "artifact": "lifecycle-common-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common/2.9.4/lifecycle-common-2.9.4.module",
+    "sha256": "c578bd755ea46d7a77811309a3539538e2d7fb86a05fc2ad81c655ecf7dff7a4",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-common-jvm:2.9.4",
+    "artifact": "lifecycle-common-jvm-2.9.4.jar",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common-jvm/2.9.4/lifecycle-common-jvm-2.9.4.jar",
+    "sha256": "37d89b2101f074ac6c260917dabb185607645ee200aa3018c7c5bde70edcf184",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-common-jvm:2.9.4",
+    "artifact": "lifecycle-common-jvm-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common-jvm/2.9.4/lifecycle-common-jvm-2.9.4.module",
+    "sha256": "1d1837f3942b33ea30aa2301fdcea2639408a0fd6fd4368c22478fa8153aebbf",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime:2.9.4",
+    "artifact": "lifecycle-runtime-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime/2.9.4/lifecycle-runtime-2.9.4.module",
+    "sha256": "dcbc5b5b50666e84258a74bfd8e514918c593a4ffcef0c0358562a02fbd80c58",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-android:2.9.4",
+    "artifact": "lifecycle-runtime-android-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-android/2.9.4/lifecycle-runtime-android-2.9.4.module",
+    "sha256": "c7888e850c40fd059fb2c1ec5bf46e88313e9b5d5152133c385a1aafb8433f47",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-android:2.9.4",
+    "artifact": "lifecycle-runtime-release.aar",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-android/2.9.4/lifecycle-runtime-android-2.9.4.aar",
+    "sha256": "86f16a1330eb23600ba90d0334b3e1db38d3a30c8b1efcd92ca21aa85afa8173",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-compose:2.9.4",
+    "artifact": "lifecycle-runtime-compose-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-compose/2.9.4/lifecycle-runtime-compose-2.9.4.module",
+    "sha256": "27d864f40ca30b967b85daac6b917bbdaea637d63e123948c95045c21be58483",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4",
+    "artifact": "lifecycle-runtime-compose-android-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-compose-android/2.9.4/lifecycle-runtime-compose-android-2.9.4.module",
+    "sha256": "e087a2c2bdfe360497339335ba51dbcdd1503c0a7c9f4f8285db7023e0429439",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4",
+    "artifact": "lifecycle-runtime-compose-release.aar",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-compose-android/2.9.4/lifecycle-runtime-compose-android-2.9.4.aar",
+    "sha256": "b6803f906a89fd85c77df343dd4aeeb349125ca79e12d55d68d4cf42f42231f6",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-compose-desktop:2.9.4",
+    "artifact": "lifecycle-runtime-compose-desktop-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-compose-desktop/2.9.4/lifecycle-runtime-compose-desktop-2.9.4.module",
+    "sha256": "c40346d50d208255992b1b053c835c963631841b70df8b6fc69f24529988dcc5",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-desktop:2.9.4",
+    "artifact": "lifecycle-runtime-desktop-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-desktop/2.9.4/lifecycle-runtime-desktop-2.9.4.module",
+    "sha256": "f952eae906bc06278f6041afb3c1333e9d6b00be4378857bcd66a1ba58367909",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-ktx:2.9.4",
+    "artifact": "lifecycle-runtime-ktx-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx/2.9.4/lifecycle-runtime-ktx-2.9.4.module",
+    "sha256": "05e5788e0005d3aa33e2d65a5dcb51bdab06094a254c135b820316d64931abc7",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.9.4",
+    "artifact": "lifecycle-runtime-ktx-android-2.9.4.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx-android/2.9.4/lifecycle-runtime-ktx-android-2.9.4.module",
+    "sha256": "6a2070e9d9243bd3b5d5a108b9db5583bcc4c742b32efb45fe33f49429eb7193",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.9.4",
+    "artifact": "lifecycle-runtime-ktx.aar",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx-android/2.9.4/lifecycle-runtime-ktx-android-2.9.4.aar",
+    "sha256": "970199c9ed1ac13d620aa8de7f8abbc28ce80653c3ce328d0ac2f15272b56e1b",
+    "matched": true
+  },
+  {
+    "coordinate": "androidx.lifecycle:lifecycle-viewmodel-android:2.9.2",
+    "artifact": "lifecycle-viewmodel-android-2.9.2.module",
+    "source": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-android/2.9.2/lifecycle-viewmodel-android-2.9.2.module",
+    "sha256": "d3b679a7f26a485561ed58573ff7ae0810fc616ee956f89ee48e49a50ccd8ddc",
+    "matched": true
+  },
+  {
+    "coordinate": "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose-desktop:2.9.6",
+    "artifact": "lifecycle-runtime-compose-desktop-2.9.6.module",
+    "source": "https://repo.maven.apache.org/maven2/org/jetbrains/androidx/lifecycle/lifecycle-runtime-compose-desktop/2.9.6/lifecycle-runtime-compose-desktop-2.9.6.module",
+    "sha256": "878bf8a861fb87834df37e1eba73fde3a592115fc0d7ba66ea23e1915728331e",
+    "matched": true
+  },
+  {
+    "coordinate": "org.jetbrains.compose.ui:ui-backhandler-android:1.9.1",
+    "artifact": "ui-backhandler-android-1.9.1.module",
+    "source": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-backhandler-android/1.9.1/ui-backhandler-android-1.9.1.module",
+    "sha256": "c26e597d1878360000d8f66f096e174e7b2a104218d2ffe07e1ae0db13245bef",
+    "matched": true
+  },
+  {
+    "coordinate": "org.jetbrains.compose.ui:ui-geometry:1.9.1",
+    "artifact": "ui-geometry-1.9.1.module",
+    "source": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-geometry/1.9.1/ui-geometry-1.9.1.module",
+    "sha256": "2a6883eb838b0b7e0b489f645dac93466f0b46022d9b54cbe84d442b0ebd2434",
+    "matched": true
+  },
+  {
+    "coordinate": "org.jetbrains.compose.ui:ui-unit:1.9.1",
+    "artifact": "ui-unit-1.9.1.module",
+    "source": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-unit/1.9.1/ui-unit-1.9.1.module",
+    "sha256": "1659a89420c51e201b548aff35e942622d61855f3c72cf1e7bee5c948881053f",
+    "matched": true
+  },
+  {
+    "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.7.1",
+    "artifact": "kotlinx-coroutines-bom-1.7.1.pom",
+    "source": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-bom/1.7.1/kotlinx-coroutines-bom-1.7.1.pom",
+    "sha256": "b925aa988c40a5c7aa0c77b21373feb18c39414926bd51c76ef44434f5bae9c2",
+    "matched": true
+  },
+  {
+    "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.4",
+    "artifact": "kotlinx-coroutines-core-1.3.4.pom",
+    "source": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core/1.3.4/kotlinx-coroutines-core-1.3.4.pom",
+    "sha256": "c7cc337927e05dfe4437717eb2ca7c3c9a58f10efecb93d387c3b806829adee6",
+    "matched": true
+  }
+]

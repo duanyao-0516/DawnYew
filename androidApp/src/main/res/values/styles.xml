@@ -1,5 +1,8 @@
 <resources>
     <style name="Theme.DawnYew" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">true</item><item name="android:colorAccent">#006A60</item><item name="android:windowActionModeOverlay">true</item><item name="android:windowBackground">#F8FAF7</item></style>
+    <style name="Theme.DawnYew.Starting" parent="Theme.DawnYew">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
     <style name="Theme.DawnYew.Capture" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>

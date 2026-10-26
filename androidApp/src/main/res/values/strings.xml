@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="floating_capture_service_label">DawnYew 悬浮记账</string>
+    <string name="floating_capture_service_description">显示可拖动的记账悬浮球。仅在你点击时截取当前屏幕，并在本机离线识别账单；不读取界面节点、不执行点击手势、不上传截图。可在 DawnYew 关闭悬浮球，或在系统设置关闭此服务。系统禁止截图的内容仍受保护。</string>
+    <string name="floating_capture_permission_title">开启全局悬浮记账</string>
+    <string name="floating_capture_permission_explanation">请在接下来的系统无障碍设置中，找到并开启「DawnYew 悬浮记账」。\n\n此授权用于在其他 App 上显示悬浮球，并仅在你点击时截取一张当前画面。截图可能包含屏幕上的个人信息，只在本机离线识别，不上传；不读取界面节点、不代替你点击或操作其他 App。\n\n识别后默认直接记账，也可在本页开启一次确认面板。结果通知提供查看、修改和撤销；应用锁仍然生效。你可随时关闭悬浮球或撤销系统授权。</string>
+</resources>

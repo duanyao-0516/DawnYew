@@ -57,6 +57,9 @@ class MainActivity:FragmentActivity(),PlatformActions {
     private var pendingShare:Uri?=null
     private var pendingShortcut:String?=null
     private var pendingCaptureAction:String?=null
+    private var pendingFloatingAction:FloatingCaptureAction?
+        get()=app.pendingFloatingAction
+        set(value) { app.pendingFloatingAction=value }
     private var pendingRestoreCandidate:VerifiedCandidate?=null
     private var restorePreviewDialog:AlertDialog?=null
     private var csvDialog:AlertDialog?=null
@@ -128,6 +131,8 @@ class MainActivity:FragmentActivity(),PlatformActions {
     }
 
     override fun onCreate(savedInstanceState:Bundle?) {
+        // The system owns the branded launch window; normal content uses the app theme.
+        setTheme(R.style.Theme_DawnYew)
         super.onCreate(savedInstanceState);enableEdgeToEdge();onBackPressedDispatcher.addCallback(this,formBackCallback)
         lockEnabled=app.lockStore.enabled;unlocked=app.session.authorized
         external?.takeIf {app.session.externalIsCurrent(it.lease)}?.let {retainContentForPicker=true;registerDocumentLauncher(it)}
@@ -138,7 +143,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
             if(authAttempt?.let {attempt->!app.session.authenticationIsCurrent(attempt)}==true)cancelAuthentication()
             fileJob?.cancel();restorePreviewDialog?.dismiss();restorePreviewDialog=null;csvDialog?.dismiss();csvDialog=null;updateRecurringAccess()
         }}
-        updateSecureWindow();acceptShare(intent);acceptShortcut(intent);acceptCapture(intent)
+        updateSecureWindow();acceptShare(intent);acceptShortcut(intent);acceptCapture(intent);acceptFloating(intent)
         lifecycleScope.launch {controller.ui.collect {if(resumed) {screenshotCapture.refresh();consumeShare()};updateRecurringAccess()}}
         if(unlocked) app.initialize()
         setContent {
@@ -201,7 +206,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         app.pendingCapture = null
         super.onNewIntent(intent);utilityPlatform.background();app.revokeSession();cancelAuthentication();fileJob?.cancel();unlocked=app.session.authorized
         retainContentForPicker=false;releaseDocumentLauncher();updateRecurringAccess()
-        pendingShare=null;pendingShortcut=null;pendingCaptureAction=null;setIntent(intent);acceptShare(intent);acceptShortcut(intent);acceptCapture(intent);if(unlocked) consumeShare()
+        pendingShare=null;pendingShortcut=null;pendingCaptureAction=null;pendingFloatingAction=null;setIntent(intent);acceptShare(intent);acceptShortcut(intent);acceptCapture(intent);acceptFloating(intent);if(unlocked) consumeShare()
     }
     private fun acceptShare(intent:Intent?) {
         if(intent?.action!=Intent.ACTION_SEND) return
@@ -214,7 +219,27 @@ class MainActivity:FragmentActivity(),PlatformActions {
     private fun consumeShare() {
         if(!resumed || !unlocked || covered || !app.session.authorized || deviceLocked) return
         val uri=pendingShare
-        if(uri!=null) {pendingShare=null;recognize(uri)} else if(!consumeCapture()) consumeShortcut()
+        if(uri!=null) {pendingShare=null;recognize(uri)} else if(!consumeFloating() && !consumeCapture()) consumeShortcut()
+    }
+    private fun acceptFloating(intent: Intent?) {
+        pendingFloatingAction = FloatingCaptureNotifications.action(intent) ?: return
+        intent?.action = null
+    }
+    private fun consumeFloating(): Boolean {
+        val action = pendingFloatingAction ?: return false
+        val data = controller.ui.value.dataset ?: return true
+        if (external != null || fileJob?.isActive == true || controller.ui.value.busy || controller.pendingOperation.value != null) return true
+        pendingFloatingAction = null
+        if (action.kind == "resume") {
+            runFileTask { app.floatingCapture.resume(action.token) }
+        } else {
+            val entry = data.entries.firstOrNull { it.id == action.entryId }
+            if (data.datasetId != action.datasetId || entry == null) controller.notify("这笔账单不属于当前数据，请切回原账本数据查看")
+            else if (!entry.active) controller.notify("这笔账单已在回收站")
+            else if (action.kind == "edit") controller.beginEditor(entry.ledgerId, editId = entry.id)
+            else controller.finance.open("账单详情", entry.id)
+        }
+        return true
     }
     private fun acceptCapture(intent: Intent?) {
         when (intent?.action) {

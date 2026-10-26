@@ -75,6 +75,11 @@ class DomainEngine(private val env: DomainEnvironment) {
     }
     fun apply(original: LedgerState, command: Command, operationId: String, expectedVersion: Long? = null): Mutation {
         validateId(operationId)
+        when (command) {
+            is Command.RecordCapture -> requireCaptureDataset(original, command.datasetId)
+            is Command.UndoCapture -> requireCaptureDataset(original, command.datasetId)
+            else -> Unit
+        }
         val encoded=json.encodeToJsonElement(command)
         val legacyEntryCommand=command is Command.SaveEntry && command.details==null && command.tagIds==null || command is Command.AddRefund && command.details==null && command.tagIds==null
         val payload = Sha256.hex((if(legacyEntryCommand) JsonObject(encoded.jsonObject.filterKeys { it!="details" && it!="tagIds" }) else encoded).toString().encodeToByteArray())
@@ -103,6 +108,8 @@ class DomainEngine(private val env: DomainEnvironment) {
         fun updateEntries(changes: List<Entry>) { val map = changes.associateBy { it.id }; state = state.copy(entries = state.entries.map { map[it.id] ?: it } + changes.filter { c -> state.entries.none { it.id == c.id } }) }
         fun refundSum(parent: String, excluding: String? = null): Long = state.entries.filter { it.active && it.parentExpenseId == parent && it.id != excluding }.fold(0L) { sum, e -> Money.add(sum, e.amountMinor) }
         when (command) {
+            is Command.RecordCapture -> { val mutation=recordCapture(state,command,operationId,env);state=mutation.state;resultIds=mutation.resultIds }
+            is Command.UndoCapture -> { val mutation=undoCapture(state,command,env);state=mutation.state;resultIds=mutation.resultIds }
             is Command.Finance -> { val mutation=mutateFinance(state,command.action,env);state=mutation.state;resultIds=mutation.resultIds }
             is Command.ReorderLedgers -> {
                 state=state.copy(ledgers=reorderEntities(state.ledgers,state.ledgers,command.orderedIds,command.expectedVersion,state.contentVersion,Ledger::id) {item,index->item.copy(sortOrder=index,revision=Money.add(item.revision,1))})
@@ -221,9 +228,16 @@ class DomainEngine(private val env: DomainEnvironment) {
             is Command.UndoImport -> { val mutation = undoImport(state, command.batchId); state = mutation.state; resultIds = mutation.resultIds }
             Command.ClearAll -> state=initialState().copy(contentVersion=original.contentVersion)
         }
-        val receipt=OperationReceipt(operationId,command::class.simpleName ?: "Command",payload,resultIds,now)
+        val receipt=OperationReceipt(operationId,stableCommandType(command),payload,resultIds,now)
         state=state.copy(contentVersion=Money.add(original.contentVersion,1),receipts=state.receipts+receipt)
         validateState(state, env::normalize)
         return Mutation(state,resultIds)
     }
+}
+
+/** These receipt names cross a platform recovery boundary and must survive R8 class renaming. */
+private fun stableCommandType(command: Command): String = when (command) {
+    is Command.RecordCapture -> "RecordCapture"
+    is Command.UndoCapture -> "UndoCapture"
+    else -> command::class.simpleName ?: "Command"
 }

@@ -88,9 +88,14 @@ data class EditorDraft(
             val existing = editId?.let { id -> state.entries.find { it.id == id && it.active } ?: invalid("这笔账单已不存在") }
             val parent = refundParentId?.let { id -> state.entries.find { it.id == id && it.active && it.kind == EntryKind.EXPENSE } ?: invalid("原支出已不存在") }
             val ledger = existing?.ledgerId ?: parent?.ledgerId ?: defaultLedgerId?.takeIf { id -> state.ledgers.any { it.id == id && !it.archived } }
-            val kind = existing?.kind ?: if (parent != null) EntryKind.REFUND else EntryKind.EXPENSE
+            val kind = existing?.kind ?: when {
+                parent != null -> EntryKind.REFUND
+                capture?.direction == Direction.INCOME -> EntryKind.INCOME
+                else -> EntryKind.EXPENSE
+            }
+            val categoryDirection = if (kind == EntryKind.INCOME) Direction.INCOME else Direction.EXPENSE
             val occurrence = existing?.occurrence ?: capture?.occurrence?.takeIf { it.isNotBlank() } ?: now
-            val category = existing?.categoryId ?: parent?.categoryId ?: state.categories.filter { it.ledgerId == ledger && it.enabled && it.direction == Direction.EXPENSE }.minWithOrNull(compareBy<Category> { it.sortOrder }.thenBy { it.id })?.id
+            val category = existing?.categoryId ?: parent?.categoryId ?: state.categories.filter { it.ledgerId == ledger && it.enabled && it.direction == categoryDirection }.minWithOrNull(compareBy<Category> { it.sortOrder }.thenBy { it.id })?.id
             val details = (existing ?: parent)?.let { entry -> state.entryDetails.find { it.entryId == entry.id } }
             val defaultAccount = state.preferences.find { it.key == "defaultAccountId" }?.value?.takeIf { state.writableAccount(it, ledger) }
             return EditorDraft(operationId, ledger, kind, existing?.let { Money.format(it.amountMinor) } ?: capture?.amount.orEmpty(),
