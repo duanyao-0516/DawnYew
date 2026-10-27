@@ -21,9 +21,14 @@ kotlin {
             implementation(libs.compose.foundation)
             implementation(libs.compose.ui)
             implementation(libs.compose.material3)
+            implementation(compose.components.resources)
             implementation(libs.androidx.lifecycle.runtime.compose)
         }
         commonTest.dependencies { implementation(kotlin("test")) }
         jvmTest.dependencies { implementation(libs.junit) }
     }
+}
+
+compose.resources {
+    packageOfResClass = "com.dawnyew.ui.resources"
 }

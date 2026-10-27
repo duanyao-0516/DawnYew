@@ -196,7 +196,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         super.onPause()
     }
     override fun onDestroy() {
-        controller.mbti.suspendAccess()
+        controller.personalityTests.suspendAccess()
         controller.recurring.updateAccess(ForegroundAccess(false,sessionEpoch,repository.epoch))
         utilityPlatform.background()
         authAttempt?.let(app.session::cancelAuthentication)
@@ -323,7 +323,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         controller.recurring.updateAccess(ForegroundAccess(
             ready=ready,
             sessionEpoch=sessionEpoch,databaseEpoch=repository.epoch))
-        controller.mbti.updateAccess(ready && !controller.ui.value.busy && controller.pendingOperation.value==null,sessionEpoch)
+        controller.personalityTests.updateAccess(ready && !controller.ui.value.busy && controller.pendingOperation.value==null,sessionEpoch)
     }
     private fun updateSecureWindow() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -384,7 +384,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
     private fun runFileTask(onRejected:()->Unit={},block:suspend CoroutineScope.()->Unit) {
         if(fileJob?.isActive==true || controller.ui.value.busy || controller.pendingOperation.value!=null) {onRejected();controller.notify("请等待当前操作完成并确认保存结果");return}
         controller.setBusy(true)
-        controller.mbti.suspendAccess()
+        controller.personalityTests.suspendAccess()
         fileJob=lifecycleScope.launch {
             try {block()} catch(e:CancellationException) {throw e}
             catch(e:Exception) {controller.notify(if(e is DomainException) e.message else "操作失败：${e.message?.take(160) ?: e::class.simpleName}")}
@@ -516,7 +516,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
                     runFileTask(onRejected={discardRestoreCandidate(candidate)}) {
                         try {repository.replaceCandidate(candidate);app.recovered();controller.resetTransientState();capture=null;controller.notify("恢复完成；已验证的新数据代际现已生效")}
                         finally {
-                            controller.mbti.synchronizeDataScope()
+                            controller.personalityTests.synchronizeDataScope()
                             withContext(NonCancellable) {repository.discardCandidate(candidate)}
                         }
                     }
@@ -646,7 +646,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
             controller.resetTransientState();capture=null
             controller.notify("本机记账数据与保护副本已清空，应用锁已保留")
             repository.acknowledgeOperation(operationId)
-        } finally {controller.mbti.synchronizeDataScope()}
+        } finally {controller.personalityTests.synchronizeDataScope()}
     }}
     override fun clearProtectionBackup()=sensitive("确认清理保护副本") {runFileTask {repository.clearProtection();controller.notify("保护副本已清理")}}
     private fun shaStream(input:InputStream,checkCancelled:()->Unit={}):String {val digest=Sha256();val buffer=ByteArray(65536);while(true){checkCancelled();val n=input.read(buffer);if(n<0)break;if(n>0)digest.update(buffer.copyOf(n))};return digest.finishHex()}

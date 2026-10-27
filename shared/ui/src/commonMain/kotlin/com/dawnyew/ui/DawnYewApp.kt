@@ -79,6 +79,8 @@ import kotlinx.coroutines.delay
         var entrySavedFor by remember {mutableStateOf<String?>(null)}
         var mbtiBack by remember {mutableStateOf<(() -> Boolean)?>(null)}
         val registerMbtiBack = remember { {handler: (() -> Boolean)? -> mbtiBack = handler} }
+        var sbtiBack by remember {mutableStateOf<(() -> Boolean)?>(null)}
+        val registerSbtiBack = remember { {handler: (() -> Boolean)? -> sbtiBack = handler} }
         LaunchedEffect(entrySavedFor) {
             val operation=entrySavedFor
             if(operation!=null) {delay(1800);if(entrySavedFor==operation) entrySavedFor=null}
@@ -94,6 +96,7 @@ import kotlinx.coroutines.delay
         val command:CommandDispatch={value,id,done->controller.perform(value,id) {done()};Unit}
         fun navigatePage(destination:String) {
             if(destination=="MBTI 测试") controller.mbti.openIntro(controller.mbti.state.value.generation)
+            if(destination=="SBTI 测试") controller.sbti.openIntro(controller.sbti.state.value.generation)
             if(currentNavigationPage.value=="首页" && destination in statisticsRoutes && !isPrimaryFinanceDestination(destination)) {
                 // A new home-card visit starts from that card's default kind; drill-back retains its state.
                 financePages.removeState("statistics:home:$destination")
@@ -108,6 +111,7 @@ import kotlinx.coroutines.delay
         }
         fun requestBack() {
             if(page=="MBTI 测试" && (mbtiBack?.invoke() ?: true)) return
+            if(page=="SBTI 测试" && (sbtiBack?.invoke() ?: true)) return
             if(page=="记一笔" && busy) {controller.notify("正在保存，请等待结果");return}
             if(page=="记一笔" && editor?.needsDiscardConfirmation==true) confirm=Confirmation("放弃未保存的账单？","输入内容和截图识别草稿会被清除；已保存的账单不受影响。",::finishBack)
             else finishBack()
@@ -184,6 +188,7 @@ import kotlinx.coroutines.delay
                     "更多" -> financePages.SaveableStateProvider("more") { MorePage(summaries=moreSummaries(snapshot,s,selectedLedger,budgetPage.snapshot?.takeIf {budgetPage.scope==homeBudgetScope && !budgetPage.loading && budgetPage.error==null},homeBudgetScope),onOpen=::navigatePage) }
                     "工具箱" -> ToolboxPage(::navigatePage)
                     "MBTI 测试" -> MbtiPage(controller.mbti,registerMbtiBack)
+                    "SBTI 测试" -> SbtiPage(controller.sbti,registerSbtiBack)
                     "调色盘","尺子","噪音测量","做个决定","石头剪刀布" -> toolStates.SaveableStateProvider(page) {when(page) {"调色盘"->PalettePage();"尺子"->RulerPage(utilities,::requestBack);"噪音测量"->NoisePage(utilities);"做个决定"->DecisionPage();"石头剪刀布"->RockPaperScissorsPage()}}
                     "流水","明细" -> {val activityScope=financeNavigation.activityScope ?: scope.toActivityScope();ActivitiesPage(s,activities,activitySummary,activityScope,{controller.finance.loadActivities(activityScope,append=true)},{controller.finance.loadActivities(activityScope,force=true)},controller.finance::openActivity,controller.finance::updateActivities,actions::chooseScreenshot)}
                     in statisticsRoutes -> financePages.SaveableStateProvider("statistics:${if(financeNavigation.sourceStatisticsScope!=null) "home" else "tab"}:$page") { FinanceStatisticsPage(s,statisticsPage,yearPage,statisticsScope,selectedYear,todayDate,statisticsScroll,page.takeUnless {it=="统计"},{setStatisticsRange(it)},{selectedYear=it},{controller.loadStatistics(statisticsScope,true)},{controller.loadYearStatistics(yearScope,true)},{controller.finance.showActivities(it.toActivityScope())},::navigatePage,panels=panels,onLoadPanel={controller.dashboard.loadPanel(it)},onActivities=controller.finance::showActivities,onEntry={openActivityId(ActivityFamily.ENTRY,it)},onChooseLedger={ledgerPicker=true}) }

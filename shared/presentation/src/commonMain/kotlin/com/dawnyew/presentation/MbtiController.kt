@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-data class MbtiDataScope(val datasetId: String, val epoch: Long)
 enum class MbtiStage { INTRO, QUESTIONS, RESULT }
 
 data class MbtiUiState(
@@ -22,50 +21,20 @@ data class MbtiUiState(
 )
 
 /** Main-thread, process-only state. Answers never enter a saved-state bundle or ledger command. */
-class MbtiController(private val currentDataScope: () -> MbtiDataScope?) {
+class MbtiController(currentDataScope: () -> PersonalityDataScope?) : PersonalityTestAccess {
     private val mutableState = MutableStateFlow(MbtiUiState())
     val state: StateFlow<MbtiUiState> = mutableState.asStateFlow()
-    private var dataScope: MbtiDataScope? = null
-    private var sessionEpoch: Long? = null
-    private var accessible = false
-    private var generation = 0L
     private var stage = MbtiStage.INTRO
     private var hasAttempt = false
     private var questionIndex = 0
     private var answers: Map<Int, Int> = emptyMap()
     private var result: Mbti93Result? = null
     private var message: String? = null
+    private val access = PersonalityAccessSession(currentDataScope, ::resetAttempt, { message = null }, ::publish)
 
-    fun updateAccess(ready: Boolean, sessionEpoch: Long) {
-        synchronizeDataScope()
-        val next = ready && dataScope != null
-        if (accessible != next || this.sessionEpoch != sessionEpoch) {
-            generation++
-            message = null
-        }
-        this.sessionEpoch = sessionEpoch
-        accessible = next
-        publish()
-    }
-
-    fun suspendAccess() {
-        if (accessible) generation++
-        accessible = false
-        message = null
-        publish()
-    }
-
-    /** Also called in restore/ClearAll finally blocks: publication can succeed before cancellation. */
-    fun synchronizeDataScope() {
-        val current = currentDataScope()
-        if (current != dataScope) {
-            dataScope = current
-            resetAttempt()
-            generation++
-        }
-        if (current == null) accessible = false
-        publish()
-    }
+    override fun updateAccess(ready: Boolean, sessionEpoch: Long) = access.updateAccess(ready, sessionEpoch)
+    override fun suspendAccess() = access.suspendAccess()
+    override fun synchronizeDataScope() = access.synchronizeDataScope()
 
     fun openIntro(token: Long) {
         if (!accept(token)) return
@@ -148,19 +117,16 @@ class MbtiController(private val currentDataScope: () -> MbtiDataScope?) {
     fun clear(token: Long) {
         if (!accept(token)) return
         resetAttempt()
-        generation++
+        access.invalidateCallbacks()
         publish()
     }
 
-    private fun accept(token: Long): Boolean {
-        synchronizeDataScope()
-        return accessible && token == generation
-    }
+    private fun accept(token: Long): Boolean = access.accept(token)
 
     private fun navigate(destination: MbtiStage) {
         stage = destination
         message = null
-        generation++
+        access.invalidateCallbacks()
         publish()
     }
 
@@ -174,9 +140,9 @@ class MbtiController(private val currentDataScope: () -> MbtiDataScope?) {
     }
 
     private fun publish() {
-        mutableState.value = if (accessible) MbtiUiState(
-            visible = true, generation = generation, stage = stage, hasAttempt = hasAttempt,
+        mutableState.value = if (access.visible) MbtiUiState(
+            visible = true, generation = access.generation, stage = stage, hasAttempt = hasAttempt,
             questionIndex = questionIndex, answers = answers.toMap(), result = result, message = message,
-        ) else MbtiUiState(generation = generation)
+        ) else MbtiUiState(generation = access.generation)
     }
 }

@@ -24,8 +24,10 @@ interface PlatformActions {
 
 /** A lifecycle-owned coordinator. UI never obtains a DAO or Android type. */
 class AppController(val repository:LedgerRepository,val environment:DomainEnvironment,private val scope:CoroutineScope,
-    currentMbtiDataScope:()->MbtiDataScope? = {null}) {
-    val mbti = MbtiController(currentMbtiDataScope)
+    currentPersonalityDataScope:()->PersonalityDataScope? = {null}) {
+    val mbti = MbtiController(currentPersonalityDataScope)
+    val sbti = SbtiController(currentPersonalityDataScope)
+    val personalityTests = PersonalityTestsAccess(listOf(mbti, sbti))
     val finance = FinanceController(this, scope)
     val dashboard = DashboardController(repository, scope)
     val recurring:RecurringCoordinator by lazy {RecurringCoordinator(this,scope)}
@@ -269,7 +271,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
         budgetStatisticsCoordinator.clear()
     }
     fun resetTransientState() {
-        mbti.suspendAccess()
+        personalityTests.suspendAccess()
         mutableTransientGeneration.update { it + 1 }
         finance.reset()
         dashboard.reset()
@@ -297,7 +299,7 @@ class AppController(val repository:LedgerRepository,val environment:DomainEnviro
     init {
         scope.launch { repository.state.collect { data ->
             if(data==null || mutable.value.dataset?.datasetId?.let {it!=data.datasetId}==true) {
-                mbti.synchronizeDataScope()
+                personalityTests.synchronizeDataScope()
                 clearQueries(); finance.reset(); dashboard.reset(); mutableTransientGeneration.update { it + 1 }
             }
             mutable.update { it.copy(dataset=data) }

@@ -13,7 +13,7 @@ import com.dawnyew.platform.security.AppLockStore
 import com.dawnyew.platform.security.SessionCoordinator
 import com.dawnyew.platform.storage.GenerationRepository
 import com.dawnyew.presentation.AppController
-import com.dawnyew.presentation.MbtiDataScope
+import com.dawnyew.presentation.PersonalityDataScope
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
@@ -63,7 +63,7 @@ class DawnYewApplication : Application() {
         if (staging.exists() && !staging.deleteRecursively()) {startupStagingNeedsCleanup = true;startupError.value = "上次操作的暂存文件未能清理，请重试后继续。"}
         repository = GenerationRepository(this, environment) { session.authorized }
         controller = AppController(repository, environment, applicationScope) {
-            repository.state.value?.let { MbtiDataScope(it.datasetId, repository.epoch) }
+            repository.state.value?.let { PersonalityDataScope(it.datasetId, repository.epoch) }
         }
         applicationScope.launch { repository.failureReason.collect { if (it != null) startupError.value = it } }
         ContextCompat.registerReceiver(this, object : BroadcastReceiver() {

@@ -14,6 +14,7 @@
 - 离线截图入口：系统新截图监听、状态栏 Quick Settings 截屏按钮、分享图片/本地选图，以及全局悬浮按钮。主动识图优先解析金额，显式正负号判断收入/支出、无符号默认支出；全局悬浮支持自动入账或开启确认，入账后通知可查看、编辑与撤销。具体权限、设备限制与验证见[浮窗验收记录](docs/implementation/2026-10-25-floating-capture-verification.md)。
 - 本地应用锁、后台遮盖、系统强生物识别/锁屏凭据与静态桌面快捷组件；没有登录、会员或云同步入口。
 - “更多 / 我的 → 工具箱 → MBTI 测试”接入 MyMBTI 93 题，五档作答后完全离线显示类型与八项原始得分；答案与结果仅保留在本进程。该题库非官方 Global 量表，设备验收状态见 [93 题验证记录](docs/implementation/2026-10-27-mbti93-verification.md)。
+- 同级新增“SBTI 测试”：按 [UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test) 的来源规则离线作答 31–32 题，包含随机题序、饮酒补充题、27 种原版结果图文和十五维评分，支持检查改答、重测及清除。仅供娱乐，进度仅保留在本进程；实现与验证见 [SBTI 接入记录](docs/implementation/2026-10-27-sbti-verification.md)，尚未发布为新版本。
 - 离线小工具、聚会猜拳和长按「我的」进入 Debug 测试数据工具继续保留。个人小游戏及其运行依赖已移出，后续在独立项目 [XanaduYonder](https://github.com/duanyao-0516/XanaduYonder) 使用 Unity + C# 开发。调色盘、尺子、声级测量等仍遵循原校准/权限要求，不代表专业测量仪器。
 
 **未实现范围：**分期、多人协作与信用卡账单周期不展示空壳入口；微信、支付宝与DawnYew Excel具体模板仍待样本；提醒尚无每日后台通知，周期处理在授权前台进行。iOS/Harmony没有可交付工程或兼容性承诺。更多边界与验证状态以本轮交付说明为准。

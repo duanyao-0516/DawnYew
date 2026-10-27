@@ -4,7 +4,7 @@ import kotlin.test.*
 
 class MbtiControllerTest {
     private class Fixture {
-        var scope: MbtiDataScope? = MbtiDataScope("test-data", 1)
+        var scope: PersonalityDataScope? = PersonalityDataScope("test-data", 1)
         val controller = MbtiController { scope }
         init { controller.updateAccess(true, 1) }
         fun token() = controller.state.value.generation
@@ -63,7 +63,7 @@ class MbtiControllerTest {
     @Test fun latestDataEpochIsCheckedOnEveryActionEvenWithoutAnAccessEvent() {
         val f = Fixture(); f.start(); f.controller.answer(f.token(), 1, 1)
         val old = f.token()
-        f.scope = MbtiDataScope("test-data", 2)
+        f.scope = PersonalityDataScope("test-data", 2)
         f.controller.answer(old, 1, 5)
         assertTrue(f.controller.state.value.answers.isEmpty())
         assertFalse(f.controller.state.value.hasAttempt)
@@ -76,7 +76,7 @@ class MbtiControllerTest {
         val f = Fixture(); f.start(); f.answerAll(); f.controller.submit(f.token())
         f.scope = null; f.controller.synchronizeDataScope()
         assertFalse(f.controller.state.value.visible)
-        f.scope = MbtiDataScope("test-data", 1)
+        f.scope = PersonalityDataScope("test-data", 1)
         f.controller.updateAccess(true, 1)
         assertNull(f.controller.state.value.result)
         assertTrue(f.controller.state.value.answers.isEmpty())
