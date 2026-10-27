@@ -1,6 +1,6 @@
 # SBTI 离线接入与验证记录
 
-日期：2026-10-27。工作树 `a44d/DawnYew`，分支 `p/duanyao.0516/feature/mbti-tool-design`，基线 `a1e86d14d0a19c6aabe4351ed03411bec664b74a`。用户指定 [UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test) 并确认完整授权。本轮只在当前工作树开发并本地提交，版本仍为 0.1.2（3）。
+日期：2026-10-27。工作树 `a44d/DawnYew`，分支 `p/duanyao.0516/feature/mbti-tool-design`，基线 `a1e86d14d0a19c6aabe4351ed03411bec664b74a`。用户指定 [UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test) 并确认完整授权。本记录对应功能开发及隔离 Debug 验证，受测包版本为 0.1.2（3）；之后用户授权合并推送 master 并发布新版本，发布阶段另见 [0.1.3 发布记录](../releases/0.1.3.md)。
 
 ## 实现范围
 
