@@ -30,7 +30,7 @@
 | Android 隔离包构建 | `scripts/project-gradle.sh :androidApp:assembleDebug :androidApp:assembleDebugAndroidTest -PdawnyewIsolatedDeviceTest=true --offline` | debug 与 androidTest assemble 通过；日志 `.local/mbti-android-green.log` |
 | 独立源码审阅 | 题库/算法、controller、返回代理、UI、Android 装配及数据作用域链路 | 已完成；发现的访问同步问题已修复并复核，无遗留有证据的 P 级问题 |
 | Android lint | `scripts/project-gradle.sh :androidApp:lintDebug -PdawnyewIsolatedDeviceTest=true --offline` | 0 errors、33 warnings；无 MBTI 文件条目 |
-| OPPO 真机 | `adb -s 3B6F4NE8A66ZXTRL shell am instrument -w -r -e class com.dawnyew.app.MbtiDeviceTest com.dawnyew.app.validation.test/androidx.test.runner.AndroidJUnitRunner` | `OK (3 tests)`，62.284 秒；Android 16 / API 36，PKM110 |
+| OPPO 真机 | `adb -s "$ANDROID_SERIAL" shell am instrument -w -r -e class com.dawnyew.app.MbtiDeviceTest com.dawnyew.app.validation.test/androidx.test.runner.AndroidJUnitRunner` | `OK (3 tests)`，62.284 秒；Android 16 / API 36，PKM110 |
 
 core 结果来自 `shared/core/build/test-results/jvmTest/TEST-*.xml`，presentation 结果来自 `shared/presentation/build/test-results/jvmTest/TEST-*.xml`；本轮重新汇总了两组 XML 数量。Android 构建日志为 `.local/mbti-android-build.log`。
 
@@ -58,6 +58,6 @@ controller 测试覆盖实际改答使结果失效、仅查看不改变结果、
 
 ## 交付边界
 
-本轮只在当前功能分支做本地提交，不推送或发布。预存的 `gradle.properties`、`gradle/gradle-daemon-jvm.properties` 与 `docs/implementation/ocr-release-jni-verification.json` 不属于本轮功能交付；文档整理未修改这些文件。后续提交仅包含本轮文件。
+开发轮以 `b9a216a` 在功能分支提交收尾。随后按用户单独授权合并到 `master`，以 `0.1.2` 发布；发布构建与资产核验见 [0.1.2 发布记录](../releases/0.1.2.md)。预存的 `gradle.properties`、`gradle/gradle-daemon-jvm.properties` 与 `docs/implementation/ocr-release-jni-verification.json` 不属于本轮功能交付；文档整理未修改这些文件。后续提交仅包含本轮文件。
 
 该测试用于自我了解，非官方 Global 量表；算法复算一致和单元测试通过不代表心理测量效度验证。
