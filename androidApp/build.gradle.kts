@@ -13,8 +13,8 @@ android {
         minSdk = 30
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
         ndk { abiFilters += providers.gradleProperty("dawnyewAbis").orElse("arm64-v8a").get().split(",") }
     }
     signingConfigs {
