@@ -1,5 +1,7 @@
 # MBTI 与十六型问卷选型调研
 
+> 后续方案已替代本次候选建议：用户指定采用 MyMBTI 93 题来源，取代此前讨论的 Global 92/143 题需求。当前依据见 [93 题来源与算法](2026-10-27-mymbti93-source.md)、[实施计划](../superpowers/plans/2026-10-27-mbti93.md)和[验证记录](../implementation/2026-10-27-mbti93-verification.md)。以下保留原调研历史，不作为当前实现规格。
+
 调研日期：2026-10-26。适用项目：DawnYew，基线 `e80600e`。本轮只交付调研与[接入设计](../superpowers/specs/2026-10-26-mbti-tool-design.md)，未加入题库或实现页面。
 
 ## 1. 结论与建议

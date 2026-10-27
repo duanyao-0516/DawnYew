@@ -1,5 +1,7 @@
 # DawnYew 人格测试工具接入设计
 
+> 本设计的题库、计分和结果方案已由用户指定的 MyMBTI 93 题方案替代，当前不实施此前讨论的 Global 92/143 题版本。以 [93 题实施计划](../plans/2026-10-27-mbti93.md)、[来源契约](../../research/2026-10-27-mymbti93-source.md)和[验证记录](../../implementation/2026-10-27-mbti93-verification.md)为准。以下保留原设计历史。
+
 日期：2026-10-26。代码基线：`e80600e`。目标工作树：`/Users/bytedance/.codex/worktrees/a44d/DawnYew`。
 
 状态：设计评审稿；本轮不修改功能代码，不代表题库已获授权或功能已完成。版本与许可的依据见[题库调研](../../research/2026-10-26-mbti-questionnaire-research.md)。

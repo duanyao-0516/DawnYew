@@ -34,6 +34,7 @@ import com.dawnyew.protocol.*
 import com.dawnyew.platform.tabular.DawnYewCsvCodec
 import com.dawnyew.ui.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.combine
 import java.io.*
 import java.util.UUID
 
@@ -112,7 +113,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         unlocked=app.session.authorized;retainContentForPicker=false;releaseDocumentLauncher()
         controller.resumeVisibleQueries()
         val uri=operation.returnedUri
-        if(uri==null) {app.session.finishExternal(operation.lease);app.discardExternal();updateRecurringAccess();return}
+        if(uri==null) {app.session.finishExternal(operation.lease);app.discardExternal();updateForegroundAccess();return}
         val action:()->Unit={
             if(external!==operation || operation.databaseEpoch!=repository.epoch || !app.session.finishExternal(operation.lease)) app.discardExternal()
             else {
@@ -141,10 +142,15 @@ class MainActivity:FragmentActivity(),PlatformActions {
             unlocked=app.session.authorized
             if(external==null) {retainContentForPicker=false;releaseDocumentLauncher()}
             if(authAttempt?.let {attempt->!app.session.authenticationIsCurrent(attempt)}==true)cancelAuthentication()
-            fileJob?.cancel();restorePreviewDialog?.dismiss();restorePreviewDialog=null;csvDialog?.dismiss();csvDialog=null;updateRecurringAccess()
+            fileJob?.cancel();restorePreviewDialog?.dismiss();restorePreviewDialog=null;csvDialog?.dismiss();csvDialog=null;updateForegroundAccess()
         }}
         updateSecureWindow();acceptShare(intent);acceptShortcut(intent);acceptCapture(intent);acceptFloating(intent)
-        lifecycleScope.launch {controller.ui.collect {if(resumed) {screenshotCapture.refresh();consumeShare()};updateRecurringAccess()}}
+        lifecycleScope.launch {
+            combine(controller.ui,controller.pendingOperation) { _, _ -> Unit }.collect {
+                if(resumed) {screenshotCapture.refresh();consumeShare()}
+                updateForegroundAccess()
+            }
+        }
         if(unlocked) app.initialize()
         setContent {
             val startupError by app.startupError.collectAsState()
@@ -178,11 +184,11 @@ class MainActivity:FragmentActivity(),PlatformActions {
         continueReturnedExternal()
         utilityPlatform.foreground()
         screenshotCapture.refresh()
-        updateRecurringAccess()
+        updateForegroundAccess()
     }
     override fun onPause() {
         resumed=false;covered=true
-        updateRecurringAccess()
+        updateForegroundAccess()
         utilityPlatform.background()
         app.session.background(isChangingConfigurations);unlocked=app.session.authorized
         if(!isChangingConfigurations) fileJob?.cancel()
@@ -190,6 +196,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         super.onPause()
     }
     override fun onDestroy() {
+        controller.mbti.suspendAccess()
         controller.recurring.updateAccess(ForegroundAccess(false,sessionEpoch,repository.epoch))
         utilityPlatform.background()
         authAttempt?.let(app.session::cancelAuthentication)
@@ -205,7 +212,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
         app.pendingCapture?.takeIf { it.token != intent.getStringExtra(CaptureRuntime.EXTRA_TOKEN) }?.let { CaptureRuntime.discard(this, it.token) }
         app.pendingCapture = null
         super.onNewIntent(intent);utilityPlatform.background();app.revokeSession();cancelAuthentication();fileJob?.cancel();unlocked=app.session.authorized
-        retainContentForPicker=false;releaseDocumentLauncher();updateRecurringAccess()
+        retainContentForPicker=false;releaseDocumentLauncher();updateForegroundAccess()
         pendingShare=null;pendingShortcut=null;pendingCaptureAction=null;pendingFloatingAction=null;setIntent(intent);acceptShare(intent);acceptShortcut(intent);acceptCapture(intent);acceptFloating(intent);if(unlocked) consumeShare()
     }
     private fun acceptShare(intent:Intent?) {
@@ -310,11 +317,13 @@ class MainActivity:FragmentActivity(),PlatformActions {
                 controller.notify("请长按桌面，在小组件中添加 DawnYew 快捷记账")
         } else controller.notify("请长按桌面，在小组件中添加 DawnYew 快捷记账")
     }
-    private fun updateRecurringAccess() {
+    private fun updateForegroundAccess() {
+        val ready=resumed && unlocked && !covered && app.session.authorized && !deviceLocked && repository.state.value!=null &&
+            external==null && !authRunning && fileJob?.isActive!=true && restorePreviewDialog?.isShowing!=true && csvDialog?.isShowing!=true
         controller.recurring.updateAccess(ForegroundAccess(
-            ready=resumed && unlocked && !covered && app.session.authorized && !deviceLocked && repository.state.value!=null &&
-                external==null && !authRunning && fileJob?.isActive!=true && restorePreviewDialog?.isShowing!=true && csvDialog?.isShowing!=true,
+            ready=ready,
             sessionEpoch=sessionEpoch,databaseEpoch=repository.epoch))
+        controller.mbti.updateAccess(ready && !controller.ui.value.busy && controller.pendingOperation.value==null,sessionEpoch)
     }
     private fun updateSecureWindow() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -330,7 +339,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
             onCancelled();controller.notify("请先在系统中设置安全锁屏或可用的强生物识别")
             AlertDialog.Builder(this).setTitle("设备认证不可用").setMessage("请先在系统设置中启用 PIN、图案、密码或支持的强生物识别，然后返回重试。不会使用自定义弱口令替代。").setPositiveButton("知道了",null).show();return
         }
-        val attempt=app.session.beginAuthentication();unlocked=app.session.authorized;authAttempt=attempt;authSuccess=onSuccess;authFailure=onCancelled;authCompleted=false;authRunning=true;updateRecurringAccess()
+        val attempt=app.session.beginAuthentication();unlocked=app.session.authorized;authAttempt=attempt;authSuccess=onSuccess;authFailure=onCancelled;authCompleted=false;authRunning=true;updateForegroundAccess()
         authentication=BiometricPrompt(this,ContextCompat.getMainExecutor(this),object:BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result:BiometricPrompt.AuthenticationResult) {
                 if(authAttempt!=attempt || !app.session.authenticationIsCurrent(attempt))return
@@ -349,11 +358,11 @@ class MainActivity:FragmentActivity(),PlatformActions {
         if(!app.session.finishAuthentication(attempt,resumed,deviceLocked)) {cancelAuthentication();return}
         val action=authSuccess;authAttempt=null;authSuccess=null;authFailure=null;authRunning=false;authCompleted=false
         unlocked=true;covered=false;utilityPlatform.foreground();try {action?.invoke()} catch(e:Exception) {app.revokeSession();unlocked=app.session.authorized;controller.notify("认证后的操作未完成，请重试：${e.message.orEmpty().take(100)}")}
-        updateRecurringAccess()
+        updateForegroundAccess()
     }
     private fun cancelAuthentication() {
         authAttempt?.let(app.session::cancelAuthentication);authAttempt=null;authSuccess=null;authCompleted=false;authRunning=false
-        val cancel=authFailure;authFailure=null;authentication?.cancelAuthentication();unlocked=app.session.authorized;cancel?.invoke();updateRecurringAccess()
+        val cancel=authFailure;authFailure=null;authentication?.cancelAuthentication();unlocked=app.session.authorized;cancel?.invoke();updateForegroundAccess()
     }
     private fun sensitive(reason:String,onCancelled:()->Unit={},action:()->Unit) {
         if(!resumed || deviceLocked) {onCancelled();return}
@@ -367,7 +376,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
     }
     private fun launchExternal(operation:PendingExternal,intent:Intent) {
         if(external!=null) {operation.password.fill('\u0000');operation.file?.delete();controller.notify("已有文件选择操作进行中");return}
-        external=operation;retainContentForPicker=true;updateRecurringAccess()
+        external=operation;retainContentForPicker=true;updateForegroundAccess()
         try {registerDocumentLauncher(operation);requireNotNull(documentLauncher).launch(intent)}
         catch(e:Exception) {app.discardExternal();retainContentForPicker=false;releaseDocumentLauncher();controller.notify("设备没有可用的本地文件选择器")}
     }
@@ -375,10 +384,11 @@ class MainActivity:FragmentActivity(),PlatformActions {
     private fun runFileTask(onRejected:()->Unit={},block:suspend CoroutineScope.()->Unit) {
         if(fileJob?.isActive==true || controller.ui.value.busy || controller.pendingOperation.value!=null) {onRejected();controller.notify("请等待当前操作完成并确认保存结果");return}
         controller.setBusy(true)
+        controller.mbti.suspendAccess()
         fileJob=lifecycleScope.launch {
             try {block()} catch(e:CancellationException) {throw e}
             catch(e:Exception) {controller.notify(if(e is DomainException) e.message else "操作失败：${e.message?.take(160) ?: e::class.simpleName}")}
-            finally {fileJob=null;controller.setBusy(false);updateRecurringAccess()}
+            finally {fileJob=null;controller.setBusy(false);updateForegroundAccess()}
         }
     }
     override fun exportBackup(encrypted:Boolean,password:CharArray) = sensitive("授权导出备份",onCancelled={password.fill('\u0000')}) {
@@ -505,11 +515,14 @@ class MainActivity:FragmentActivity(),PlatformActions {
                 sensitive("确认替换本地账本",onCancelled={discardRestoreCandidate(candidate)}) {
                     runFileTask(onRejected={discardRestoreCandidate(candidate)}) {
                         try {repository.replaceCandidate(candidate);app.recovered();controller.resetTransientState();capture=null;controller.notify("恢复完成；已验证的新数据代际现已生效")}
-                        finally {withContext(NonCancellable) {repository.discardCandidate(candidate)}}
+                        finally {
+                            controller.mbti.synchronizeDataScope()
+                            withContext(NonCancellable) {repository.discardCandidate(candidate)}
+                        }
                     }
                 }
             }.create().also {dialog->
-                dialog.setOnDismissListener {if(pendingRestoreCandidate===candidate) {pendingRestoreCandidate=null;discardRestoreCandidate(candidate)};updateRecurringAccess()}
+                dialog.setOnDismissListener {if(pendingRestoreCandidate===candidate) {pendingRestoreCandidate=null;discardRestoreCandidate(candidate)};updateForegroundAccess()}
                 dialog.show()
             }
     }
@@ -550,7 +563,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
                             addCategory(Intent.CATEGORY_OPENABLE);type="text/csv";putExtra(Intent.EXTRA_TITLE,"DawnYew-${app.environment.localNow().take(10)}.csv");putExtra(Intent.EXTRA_LOCAL_ONLY,true)
                         })
                     }
-                }.create().also {dialog->dialog.setOnDismissListener {if(csvDialog===dialog)csvDialog=null;if(!claimed)file.delete();updateRecurringAccess()};dialog.show();handedToDialog=true}
+                }.create().also {dialog->dialog.setOnDismissListener {if(csvDialog===dialog)csvDialog=null;if(!claimed)file.delete();updateForegroundAccess()};dialog.show();handedToDialog=true}
             } finally {
                 if(!handedToDialog) withContext(NonCancellable+Dispatchers.IO) {
                     scratch?.let {if(it.exists() && !it.delete()) throw IOException("CSV 暂存清理失败，下次启动将重试")}
@@ -589,7 +602,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
                     if(!csvPreviewCurrent(value)) controller.notify("预览已过期，请重新读取 CSV")
                     else controller.perform(Command.CommitImport(plan),plan.submissionId) {controller.notify("导入完成，可在导入历史核对或撤销本批次")}
                 }
-            }.create().also {dialog->dialog.setOnDismissListener {if(csvDialog===dialog)csvDialog=null;updateRecurringAccess()};dialog.show();dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled=preview.canCommit}
+            }.create().also {dialog->dialog.setOnDismissListener {if(csvDialog===dialog)csvDialog=null;updateForegroundAccess()};dialog.show();dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled=preview.canCommit}
     }
     private fun showCsvSelection(value:CsvPreviewSession,selection:ImportSelection,preview:ImportPreview) {
         if(!csvPreviewCurrent(value)) {controller.notify("预览已过期，请重新读取 CSV");return}
@@ -603,7 +616,7 @@ class MainActivity:FragmentActivity(),PlatformActions {
             .setNegativeButton("返回") {_,_->showCsvPreview(value,selection)}
             .setPositiveButton("应用选择") {_,_->showCsvPreview(value,ImportSelection(selected))}
             .setNeutralButton("确认保留已选疑似重复") {_,_->showCsvPreview(value,ImportSelection(selected,selected.toSet()))}
-            .create().also {dialog->dialog.setOnDismissListener {if(csvDialog===dialog)csvDialog=null;updateRecurringAccess()};dialog.show()}
+            .create().also {dialog->dialog.setOnDismissListener {if(csvDialog===dialog)csvDialog=null;updateForegroundAccess()};dialog.show()}
     }
     private fun csvStatus(value:PreviewDisposition)=when(value) {
         PreviewDisposition.NEW->"可新增";PreviewDisposition.DUPLICATE->"已存在，将跳过";PreviewDisposition.DUPLICATE_IN_TRASH->"回收站已存在，将跳过"
@@ -626,7 +639,15 @@ class MainActivity:FragmentActivity(),PlatformActions {
             .setMessage(result.explanation + "\n请返回手动记账；本次没有保存任何账单。").setPositiveButton("知道了", null).show()
         else capture = result.draft
     }
-    override fun clearAllData()=sensitive("确认清空全部记账数据") {runFileTask {val operationId=app.environment.id();repository.execute(Command.ClearAll,operationId);controller.resetTransientState();capture=null;controller.notify("本机记账数据与保护副本已清空，应用锁已保留");repository.acknowledgeOperation(operationId)}}
+    override fun clearAllData()=sensitive("确认清空全部记账数据") {runFileTask {
+        val operationId=app.environment.id()
+        try {
+            repository.execute(Command.ClearAll,operationId)
+            controller.resetTransientState();capture=null
+            controller.notify("本机记账数据与保护副本已清空，应用锁已保留")
+            repository.acknowledgeOperation(operationId)
+        } finally {controller.mbti.synchronizeDataScope()}
+    }}
     override fun clearProtectionBackup()=sensitive("确认清理保护副本") {runFileTask {repository.clearProtection();controller.notify("保护副本已清理")}}
     private fun shaStream(input:InputStream,checkCancelled:()->Unit={}):String {val digest=Sha256();val buffer=ByteArray(65536);while(true){checkCancelled();val n=input.read(buffer);if(n<0)break;if(n>0)digest.update(buffer.copyOf(n))};return digest.finishHex()}
 }

@@ -13,6 +13,7 @@ private val utilityEntries = listOf(
     "噪音测量" to "本机麦克风声级与参考校准",
     "做个决定" to "添加选项，随机选出一个",
     "石头剪刀布" to "双人对坐，同时揭晓",
+    "MBTI 测试" to "93题，离线查看类型与维度得分",
 )
 
 @Composable internal fun MorePage(summaries: Map<String, String> = emptyMap(), onOpen: (String) -> Unit) {
